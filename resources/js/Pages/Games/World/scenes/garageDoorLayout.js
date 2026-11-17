@@ -37,3 +37,32 @@ export function sectionPoses({ h, sections }, open) {
         };
     });
 }
+
+/** A roll-up door's curtain: `slat`s this tall, linked edge to edge, on a
+ * drum `core` across (its radius) at the top of the opening, the curtain
+ * `thick` through as it winds on. */
+export const ROLL_UP = { slat: 15, core: 8, thick: 2 };
+
+/** Roll-up door `door` ({ h }) at `open` (0 shut to 1 open): its
+ * curtain's `bottom` edge, each slat still hanging below the top of the
+ * opening, bottom first ({ y, tall }, the one going into the coil cut off
+ * there), and the radius of the `coil` wound on the drum above. */
+export function rollUpPose({ h }, open) {
+    const bottom = open * h;
+    const slats = [];
+    for (let y = bottom; y < h - 1e-6; y += ROLL_UP.slat) {
+        slats.push({ y, tall: Math.min(ROLL_UP.slat, h - y) });
+    }
+    // The wound curtain's end-on area, as an annulus round the drum.
+    const wound = (bottom * ROLL_UP.thick) / Math.PI;
+    return { bottom, slats, coil: Math.sqrt(ROLL_UP.core ** 2 + wound) };
+}
+
+/** A pair of carriage doors' `turn`s about y at `open` (0 shut to 1
+ * open), left leaf then right, each about its own jamb: they swing out,
+ * away from the room, the left one way and the right the other, to stand
+ * square to the wall once open. */
+export function carriageTurns(open) {
+    const turn = (open * Math.PI) / 2;
+    return [turn, -turn];
+}

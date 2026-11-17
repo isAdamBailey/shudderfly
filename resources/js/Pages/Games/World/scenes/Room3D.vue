@@ -53,6 +53,7 @@ import {
     slotsIn,
 } from "./bookshelf.js";
 import GarageClicker from "../components/GarageClicker.vue";
+import { useGarageStyles } from "../composables/useGarageStyles.js";
 import { createOpener } from "./garageOpener.js";
 import { createRoomScene } from "./RoomScene.js";
 import { BASS_DRUM, headPoint, hitEdge } from "./drumLayout.js";
@@ -414,6 +415,13 @@ const wallButton = props.scene.interactables.find(
 );
 // Whether the opener's light is on, for the clicker's lamp.
 const openerLit = ref(false);
+// Which clicker is on screen and which door is in the wall, as last
+// picked on this device.
+const garageStyles = useGarageStyles();
+watch(garageStyles.door, (style) => {
+    graph?.setGarageDoorStyle(style);
+    props.stage.renderer.invalidate();
+});
 
 /** Shows where the opener has the door and its light. */
 function showOpener() {
@@ -440,6 +448,11 @@ function onClicker() {
     pressGarageDoor();
 }
 
+/** The clicker's swap buttons, while nothing's frozen. */
+function swapGarage(next) {
+    if (!room.state.frozen) next();
+}
+
 onMounted(() => {
     const { renderer } = props.stage;
     graph = createRoomScene(renderer.three, renderer.kit, {
@@ -448,6 +461,7 @@ onMounted(() => {
         theme: page.props.theme,
         night: dark.value,
         exitWord: t("games.world.exit_sign"),
+        garageDoorStyle: garageStyles.door.value,
     });
     // Other props can use the same swing hook for animation (the bath's
     // bubbles, for example), but only pendulum clocks have a beat to tick.
@@ -1647,7 +1661,14 @@ defineExpose({
                 @click="onInstrumentClick(s.item, $event)"
             />
 
-            <GarageClicker v-if="opener" :lit="openerLit" @press="onClicker" />
+            <GarageClicker
+                v-if="opener"
+                :clicker="garageStyles.clicker.value"
+                :lit="openerLit"
+                @press="onClicker"
+                @next-clicker="swapGarage(garageStyles.nextClicker)"
+                @next-door="swapGarage(garageStyles.nextDoor)"
+            />
 
             <TootPuff
                 v-for="puff in puffs"

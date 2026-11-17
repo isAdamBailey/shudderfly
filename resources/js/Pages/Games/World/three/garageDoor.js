@@ -1,13 +1,25 @@
-import { sectionPoses, topEdge } from "../scenes/garageDoorLayout.js";
+import {
+    carriageTurns,
+    ROLL_UP,
+    rollUpPose,
+    sectionPoses,
+    topEdge,
+} from "../scenes/garageDoorLayout.js";
 import { canvasTexture } from "./useWorldRenderer.js";
 import { worldNight, worldTheme } from "./themes.js";
 
-// The Garage's door (issue #227) on its back wall: a white sectional door
-// in a wooden frame, its hinged sections running up the opening and back
-// under the ceiling in a pair of tracks (scenes/garageDoorLayout.js), the
-// opener hung from the ceiling past their end on a rail, and through the
-// opening, the driveway down to the street in the season's colours, by
-// day or by night.
+// The Garage's door (issue #227) on its back wall, in a wooden frame, in
+// any of three styles (composables/useGarageStyles.js GARAGE_DOORS), all
+// built up front so a swap only shows another (setStyle()):
+// - `sectional`, white, its hinged sections running up the opening and
+//   back under the ceiling in a pair of tracks, pulled by the opener on
+//   its rail;
+// - `roll-up`, corrugated metal slats that wind onto a coil over the top;
+// - `carriage`, a pair of wooden doors that swing out, away from the
+//   room.
+// The opener hangs from the ceiling whichever it is, and through the
+// opening is the driveway down to the street in the season's colours, by
+// day or by night. The poses are scenes/garageDoorLayout.js's.
 //
 // Built in world units in the door's own space: the wall on z = 0, its
 // middle on x = 0, the floor y = 0. The room poses it and hangs it with
@@ -34,6 +46,19 @@ const UNIT = { w: 70, h: 36, d: 60, out: 50, up: 36 };
 const RELEASE = "#dc2626";
 const ROPE = { bottom: 230, z: 22 };
 const PX = 512; // the backdrop's canvas, across
+// The roll-up door: its slats' steel, and how far through they are.
+const SLAT = { color: "#9ca3af", rib: "#6b7280", depth: 3 };
+// The carriage doors: their wood, its trim and iron, how thick they are
+// and how far out they hang, and how much darker one gets turned all the
+// way out.
+const CARRIAGE = {
+    wood: "#9a6a3f",
+    trim: "#6f4626",
+    iron: "#1f2937",
+    depth: 4,
+    z: 5,
+    shade: 0.5,
+};
 
 /** Paints the driveway out of the opening, `w` × `h` px, in look `look`
  * (worldTheme() or worldNight()), with stars when it's `night`. */
@@ -101,11 +126,302 @@ function paintDriveway(ctx, w, h, look, night) {
     }
 }
 
+/** The sectional door's sections and their hardware (tracks, rail,
+ * trolley and the red release rope) in `group`, for door `door` under a
+ * ceiling, the rail out to the opener's `rail` long at `railY`:
+ * { group, show(open) }. */
+function sectionalDoor(
+    THREE,
+    door,
+    { add, box, material, steel, rail, railY }
+) {
+    const { w, h } = door;
+    const group = new THREE.Group();
+    // The sections, each pivoted on its bottom edge to tip as it rounds
+    // the top of the opening: white, ribbed, the top one windowed.
+    const tall = h / door.sections;
+    const white = material(WHITE, { roughness: 0.45 });
+    const rib = material(RIB, { roughness: 0.5 });
+    const glass = material("#1e3a5f", { roughness: 0.15, metalness: 0.3 });
+    const sections = Array.from({ length: door.sections }, (_, i) => {
+        const pivot = new THREE.Group();
+        box([w - 2, tall - 1, SECTION_DEPTH], white, [0, tall / 2, 0], pivot);
+        for (const at of [0.3, 0.7]) {
+            box(
+                [w - 24, 3, 1.5],
+                rib,
+                [0, tall * at, SECTION_DEPTH / 2],
+                pivot
+            );
+        }
+        if (i === door.sections - 1) {
+            const panes = 4;
+            const pane = (w - 60) / panes;
+            for (let n = 0; n < panes; n += 1) {
+                box(
+                    [pane - 16, tall * 0.4, 1],
+                    glass,
+                    [
+                        -w / 2 + 30 + pane * (n + 0.5),
+                        tall / 2,
+                        SECTION_DEPTH / 2,
+                    ],
+                    pivot
+                );
+            }
+        }
+        group.add(pivot);
+        return pivot;
+    });
+
+    // The tracks out under the ceiling, either side, as far as the door
+    // goes back, and the opener's rail down the middle to it.
+    const reach = h + 10;
+    for (const side of [-1, 1]) {
+        box(
+            [4, 4, reach],
+            steel,
+            [side * (w / 2 - 4), h + 6, reach / 2],
+            group
+        );
+    }
+    box([6, 6, rail], steel, [0, railY, rail / 2], group);
+    // The trolley on the rail, which the opener pulls along with the
+    // door's top (show()), and hanging from it the red emergency release
+    // rope with its T handle.
+    const trolley = new THREE.Group();
+    group.add(trolley);
+    box([12, 10, 18], steel, [0, railY, 0], trolley);
+    const red = material(RELEASE, { roughness: 0.7 });
+    const rope = railY - ROPE.bottom;
+    add(
+        new THREE.CylinderGeometry(0.9, 0.9, rope, 8),
+        red,
+        [0, ROPE.bottom + rope / 2, 0],
+        trolley,
+        false
+    );
+    add(
+        new THREE.CylinderGeometry(2.4, 2.4, 16, 12).rotateZ(Math.PI / 2),
+        red,
+        [0, ROPE.bottom - 2, 0],
+        trolley,
+        false
+    );
+
+    return {
+        group,
+        show(open) {
+            for (const [i, pose] of sectionPoses(door, open).entries()) {
+                sections[i].position.set(0, pose.y, pose.z + SECTION_Z);
+                sections[i].rotation.x = pose.tilt;
+            }
+            // A fixed arm out from the door's top edge.
+            trolley.position.z = topEdge(door, open).z + ROPE.z;
+        },
+    };
+}
+
+/** The roll-up door's slats in their guides and its coil over the top,
+ * in `group`, for door `door`: { group, show(open) }. */
+function rollUpDoor(THREE, door, { add, box, material }) {
+    const { w, h } = door;
+    const group = new THREE.Group();
+    const steel = material(SLAT.color, { metalness: 0.55, roughness: 0.45 });
+    const ribSteel = material(SLAT.rib, { metalness: 0.6, roughness: 0.4 });
+    const most = Math.ceil(h / ROLL_UP.slat);
+    // Each slat a unit tall, stretched to what of it is still hanging, a
+    // ridge across its middle; instanced, so a door of slats is two draws.
+    const instanced = (geometry, mat) => {
+        const mesh = new THREE.InstancedMesh(geometry, mat, most);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+        return mesh;
+    };
+    const slats = instanced(new THREE.BoxGeometry(w - 2, 1, SLAT.depth), steel);
+    const ribs = instanced(new THREE.BoxGeometry(w - 6, 1, 1.5), ribSteel);
+    // The heavier bar along the curtain's foot.
+    const foot = box(
+        [w - 2, 6, SLAT.depth + 2],
+        ribSteel,
+        [0, 3, SECTION_Z],
+        group
+    );
+    // The guides up either side.
+    for (const side of [-1, 1]) {
+        box(
+            [6, h, SLAT.depth + 4],
+            ribSteel,
+            [side * (w / 2 - 3), h / 2, SECTION_Z],
+            group
+        );
+    }
+    // The coil's drum just over the header, as far out as the fattest
+    // coil (all the curtain wound on), between its end plates.
+    const fattest = rollUpPose(door, 1).coil;
+    const coilAt = [0, h + JAMB + fattest, 8 + fattest];
+    const coil = add(
+        new THREE.CylinderGeometry(1, 1, w - 16, 24).rotateZ(Math.PI / 2),
+        steel,
+        coilAt,
+        group
+    );
+    for (const side of [-1, 1]) {
+        add(
+            new THREE.CylinderGeometry(fattest + 3, fattest + 3, 4, 24).rotateZ(
+                Math.PI / 2
+            ),
+            ribSteel,
+            [side * (w / 2 - 4), coilAt[1], coilAt[2]],
+            group
+        );
+    }
+
+    const place = new THREE.Matrix4();
+    const scale = new THREE.Vector3();
+    const at = new THREE.Vector3();
+    const none = new THREE.Quaternion();
+    /** Lays the curtain out `open` of the way up. */
+    function show(open) {
+        const pose = rollUpPose(door, open);
+        pose.slats.forEach(({ y, tall }, i) => {
+            at.set(0, y + tall / 2, SECTION_Z);
+            slats.setMatrixAt(
+                i,
+                place.compose(at, none, scale.set(1, tall, 1))
+            );
+            at.z = SECTION_Z + SLAT.depth / 2;
+            ribs.setMatrixAt(
+                i,
+                place.compose(at, none, scale.set(1, Math.min(4, tall), 1))
+            );
+        });
+        slats.count = ribs.count = pose.slats.length;
+        slats.instanceMatrix.needsUpdate = true;
+        ribs.instanceMatrix.needsUpdate = true;
+        foot.position.y = pose.bottom + 3;
+        coil.scale.set(1, pose.coil, pose.coil);
+    }
+    // Culled by where the slats hang while it's shut, as far as they reach.
+    show(0);
+    slats.computeBoundingSphere();
+    ribs.computeBoundingSphere();
+
+    return { group, show };
+}
+
+/** The carriage doors, a pair hung from either jamb, in `group`, for door
+ * `door`: { group, show(open) }. */
+function carriageDoors(THREE, door, { add, box, material }) {
+    const { w, h } = door;
+    const group = new THREE.Group();
+    const wide = w / 2 - 1;
+    const tall = h - 2;
+    const looks = {
+        wood: material(CARRIAGE.wood, { roughness: 0.75 }),
+        trim: material(CARRIAGE.trim, { roughness: 0.8 }),
+        iron: material(CARRIAGE.iron, { metalness: 0.5, roughness: 0.5 }),
+        glass: material("#1e3a5f", { roughness: 0.15, metalness: 0.3 }),
+    };
+    // Each look with its own colour, to darken from.
+    const shades = Object.values(looks).map((mat) => [mat, mat.color.clone()]);
+    const front = CARRIAGE.depth / 2;
+    // A leaf, `side` -1 on the left, +1 on the right: its board, the rails
+    // and stiles round it, a cross brace under a row of windows, the strap
+    // hinges at its jamb and a handle at its meeting edge. Built out from
+    // its hinge along -side (toward the middle).
+    const leaves = [-1, 1].map((side) => {
+        const pivot = new THREE.Group();
+        pivot.position.set((side * w) / 2, 1, CARRIAGE.z);
+        const leaf = new THREE.Group();
+        leaf.position.x = (-side * wide) / 2;
+        pivot.add(leaf);
+        group.add(pivot);
+        // What's on its face is too thin to cast a shadow worth a draw.
+        const on = (size, mat, x, y, z = front) =>
+            add(new THREE.BoxGeometry(...size), mat, [x, y, z], leaf, false);
+        box([wide, tall, CARRIAGE.depth], looks.wood, [0, tall / 2, 0], leaf);
+        // Boards, down the lower two thirds.
+        for (let x = -wide / 2 + 20; x < wide / 2 - 10; x += 22) {
+            on([1.5, tall * 0.64, 1], looks.trim, x, tall * 0.34);
+        }
+        const rail = 14;
+        on([wide, rail, 2], looks.trim, 0, rail / 2);
+        on([wide, rail, 2], looks.trim, 0, tall * 0.68);
+        on([wide, rail, 2], looks.trim, 0, tall - rail / 2);
+        on([rail, tall, 2], looks.trim, -wide / 2 + rail / 2, tall / 2);
+        on([rail, tall, 2], looks.trim, wide / 2 - rail / 2, tall / 2);
+        // The brace, corner to corner across the boards.
+        const across = wide - 2 * rail;
+        const up = tall * 0.68 - rail;
+        const brace = on(
+            [Math.hypot(across, up), 10, 2],
+            looks.trim,
+            0,
+            rail / 2 + up / 2
+        );
+        brace.rotation.z = side * Math.atan2(up, across);
+        // Windows over the top rail: three panes.
+        const pane = (wide - 2 * rail - 16) / 3;
+        for (let n = 0; n < 3; n += 1) {
+            on(
+                [pane, tall * 0.18, 1],
+                looks.glass,
+                -wide / 2 + rail + 8 + pane * (n + 0.5) + (n - 1) * 4,
+                tall * 0.84,
+                front + 0.5
+            );
+        }
+        const hinge = side * (wide / 2 - 30);
+        for (const y of [tall * 0.2, tall * 0.8]) {
+            on([60, 6, 1], looks.iron, hinge, y, front + 1.5);
+        }
+        on(
+            [4, 34, 3],
+            looks.iron,
+            -side * (wide / 2 - 24),
+            tall * 0.5,
+            front + 2
+        );
+        return pivot;
+    });
+
+    return {
+        group,
+        show(open) {
+            const turns = carriageTurns(open);
+            for (const [i, turn] of turns.entries()) {
+                // Foreshortened toward its hinge, never quite to nothing:
+                // open, a leaf stands edge on in its jamb.
+                leaves[i].scale.x = Math.max(Math.cos(turn), 0.03);
+            }
+            const away = Math.sin(Math.abs(turns[0]));
+            const k = 1 - CARRIAGE.shade * away;
+            for (const [mat, color] of shades) {
+                mat.color.copy(color).multiplyScalar(k);
+            }
+        },
+    };
+}
+
+/** Each door style's builder, by its name in GARAGE_DOORS
+ * (composables/useGarageStyles.js; a test keeps them in step). */
+export const DOOR_STYLES = {
+    sectional: sectionalDoor,
+    "roll-up": rollUpDoor,
+    carriage: carriageDoors,
+};
+
 /** Door `door` ({ w, h, sections }) under a ceiling `wallHeight` up, in
- * the light of seasonal `theme`, shut: { group, show(open), setNight(n),
- * setLit(on), light }: `light` is where the opener's light hangs, just
- * under its lens. */
-export function garageDoor(THREE, door, { theme, wallHeight }) {
+ * the light of seasonal `theme`, in style `style`, shut: { group,
+ * show(open), setStyle(style), setNight(n), setLit(on), light }: `light`
+ * is where the opener's light hangs, just under its lens. */
+export function garageDoor(
+    THREE,
+    door,
+    { theme, wallHeight, style = "sectional" }
+) {
     const { w, h } = door;
     const { up, out } = UNIT;
     const group = new THREE.Group();
@@ -159,79 +475,11 @@ export function garageDoor(THREE, door, { theme, wallHeight }) {
     }
     box([w + 2 * JAMB, JAMB, 8], wood, [0, h + JAMB / 2, 4]);
 
-    // The sections, each pivoted on its bottom edge to tip as it rounds
-    // the top of the opening: white, ribbed, the top one windowed.
-    const tall = h / door.sections;
-    const white = material(WHITE, { roughness: 0.45 });
-    const rib = material(RIB, { roughness: 0.5 });
-    const glass = material("#1e3a5f", { roughness: 0.15, metalness: 0.3 });
-    const sections = Array.from({ length: door.sections }, (_, i) => {
-        const pivot = new THREE.Group();
-        box([w - 2, tall - 1, SECTION_DEPTH], white, [0, tall / 2, 0], pivot);
-        for (const at of [0.3, 0.7]) {
-            box(
-                [w - 24, 3, 1.5],
-                rib,
-                [0, tall * at, SECTION_DEPTH / 2],
-                pivot
-            );
-        }
-        if (i === door.sections - 1) {
-            const panes = 4;
-            const pane = (w - 60) / panes;
-            for (let n = 0; n < panes; n += 1) {
-                box(
-                    [pane - 16, tall * 0.4, 1],
-                    glass,
-                    [
-                        -w / 2 + 30 + pane * (n + 0.5),
-                        tall / 2,
-                        SECTION_DEPTH / 2,
-                    ],
-                    pivot
-                );
-            }
-        }
-        group.add(pivot);
-        return pivot;
-    });
-
-    // The tracks out under the ceiling, either side, as far as the door
-    // goes back, and the opener's rail down the middle to it.
-    const steel = material(STEEL, { metalness: 0.6, roughness: 0.4 });
-    const reach = h + 10;
-    for (const side of [-1, 1]) {
-        box([4, 4, reach], steel, [side * (w / 2 - 4), h + 6, reach / 2]);
-    }
-    const unitAt = h + up + UNIT.h / 2;
-    const rail = out + h - UNIT.d / 2;
-    const railY = h + 16;
-    box([6, 6, rail], steel, [0, railY, rail / 2]);
-    // The trolley on the rail, which the opener pulls along with the
-    // door's top (show()), and hanging from it the red emergency release
-    // rope with its T handle.
-    const trolley = new THREE.Group();
-    group.add(trolley);
-    box([12, 10, 18], steel, [0, railY, 0], trolley);
-    const red = material(RELEASE, { roughness: 0.7 });
-    const rope = railY - ROPE.bottom;
-    add(
-        new THREE.CylinderGeometry(0.9, 0.9, rope, 8),
-        red,
-        [0, ROPE.bottom + rope / 2, 0],
-        trolley,
-        false
-    );
-    add(
-        new THREE.CylinderGeometry(2.4, 2.4, 16, 12).rotateZ(Math.PI / 2),
-        red,
-        [0, ROPE.bottom - 2, 0],
-        trolley,
-        false
-    );
     // The opener on its straps from the ceiling, and its lens under it,
-    // lit while its light is on.
+    // lit while its light is on. The sectional door's rail runs out to it.
+    const unitAt = h + up + UNIT.h / 2;
     const unitZ = h + out;
+    const steel = material(STEEL, { metalness: 0.6, roughness: 0.4 });
     box([UNIT.w, UNIT.h, UNIT.d], material(OPENER), [0, unitAt, unitZ]);
     for (const side of [-1, 1]) {
         const strap = wallHeight - (unitAt + UNIT.h / 2);
@@ -253,20 +501,39 @@ export function garageDoor(THREE, door, { theme, wallHeight }) {
         [0, unitAt - UNIT.h / 2 - 1.5, unitZ]
     );
 
-    /** Lays the sections out `open` of the way up (0 shut, 1 open). */
-    function show(open) {
-        for (const [i, pose] of sectionPoses(door, open).entries()) {
-            sections[i].position.set(0, pose.y, pose.z + SECTION_Z);
-            sections[i].rotation.x = pose.tilt;
-        }
-        // A fixed arm out from the door's top edge.
-        trolley.position.z = topEdge(door, open).z + ROPE.z;
+    const parts = { add, box, material, steel };
+    // The sectional door's rail runs out to the opener.
+    const rail = { rail: out + h - UNIT.d / 2, railY: h + 16 };
+    const styles = Object.fromEntries(
+        Object.entries(DOOR_STYLES).map(([name, build]) => [
+            name,
+            build(THREE, door, { ...parts, ...rail }),
+        ])
+    );
+    for (const { group: built } of Object.values(styles)) group.add(built);
+
+    let open = 0;
+    let shown = null;
+    /** Lays the door out `to` of the way up (0 shut, 1 open). */
+    function show(to) {
+        open = to;
+        shown.show(open);
     }
-    show(0);
+    /** Shows door style `name` (the sectional for one there isn't), where
+     * the last was. */
+    function setStyle(name) {
+        shown = styles[name] ?? styles.sectional;
+        for (const built of Object.values(styles)) {
+            built.group.visible = built === shown;
+        }
+        show(open);
+    }
+    setStyle(style);
 
     return {
         group,
         show,
+        setStyle,
         /** The night's driveway `n` of the way over the day's. */
         setNight(n) {
             dark.opacity = n;
