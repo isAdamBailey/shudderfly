@@ -1,8 +1,14 @@
 <script setup>
+import { useBlink } from "./useBlink.js";
+
 /**
  * The Garage's keychain fob clicker (issue #227): a little black fob on
  * its ring, one big rubber button with a garage on it that presses the
  * opener, and a red LED that shows the opener's light (`lit`).
+ *
+ * Lock and unlock, below it, are for show: a tap presses one in, lights
+ * its padlock and blinks the LED, as a car's fob does, and nothing else
+ * (GarageClicker.vue doesn't press the opener for an `.extra`).
  *
  * Only its picture: GarageClicker.vue is the button, and pushes in its
  * `.bar`.
@@ -10,10 +16,30 @@
 defineProps({
     lit: { type: Boolean, default: false },
 });
+
+const { blink, send, blinking } = useBlink();
+
+// Lock, its shackle shut, and unlock, its shackle open.
+const SHOW_BUTTONS = [
+    {
+        name: "lock",
+        x: 36,
+        shackle: "M44.5 162 V159.5 A2.5 2.5 0 0 1 49.5 159.5 V162",
+    },
+    {
+        name: "unlock",
+        x: 66,
+        shackle: "M74.5 162 V159.5 A2.5 2.5 0 0 1 79.5 158",
+    },
+];
 </script>
 
 <template>
-    <svg viewBox="0 0 124 200" aria-hidden="true">
+    <svg
+        viewBox="0 0 124 200"
+        aria-hidden="true"
+        style="--led: #f87171; --led-glow: #ef4444"
+    >
         <defs>
             <linearGradient id="gcf-body" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0" stop-color="#4b5563" />
@@ -82,18 +108,48 @@ defineProps({
             </g>
         </g>
 
-        <!-- Lock and unlock, below: for show. -->
-        <g fill="#374151" stroke="#111827">
-            <rect x="36" y="156" width="22" height="16" rx="6" />
-            <rect x="66" y="156" width="22" height="16" rx="6" />
-        </g>
-        <g fill="#9ca3af">
-            <rect x="43" y="162" width="8" height="6" rx="1" />
-            <rect x="73" y="162" width="8" height="6" rx="1" />
-        </g>
-        <g fill="none" stroke="#9ca3af" stroke-width="1.6">
-            <path d="M44.5 162 V159.5 A2.5 2.5 0 0 1 49.5 159.5 V162" />
-            <path d="M74.5 162 V159.5 A2.5 2.5 0 0 1 79.5 158" />
+        <!-- Lock and unlock, below: for show. They blink the LED. -->
+        <circle
+            v-if="blink"
+            :key="blink.n"
+            class="blink"
+            cx="62"
+            cy="64"
+            r="3.5"
+        />
+        <g
+            v-for="b in SHOW_BUTTONS"
+            :key="b.name"
+            class="extra"
+            :class="{ sending: blinking(b.name) }"
+            :data-extra="b.name"
+            @click="send(b.name)"
+        >
+            <rect
+                :x="b.x"
+                y="156"
+                width="22"
+                height="16"
+                rx="6"
+                fill="#374151"
+                stroke="#111827"
+            />
+            <rect
+                class="glyph"
+                :x="b.x + 7"
+                y="162"
+                width="8"
+                height="6"
+                rx="1"
+                fill="#9ca3af"
+            />
+            <path
+                class="glyph-line"
+                :d="b.shackle"
+                fill="none"
+                stroke="#9ca3af"
+                stroke-width="1.6"
+            />
         </g>
     </svg>
 </template>

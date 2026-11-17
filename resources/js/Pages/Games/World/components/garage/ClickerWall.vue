@@ -1,9 +1,17 @@
 <script setup>
+import { ref } from "vue";
+
 /**
  * The Garage's classic clicker (issue #227): a big beige wall console
  * like the one on the wall (three/garageButton.js), drawn in detail. Its
  * push bar presses the opener, and its
  * indicator lamp shows the opener's light (`lit`).
+ *
+ * Its light button and lock slide are for show: a tap on the light
+ * button lights the bulb on it (or puts it out), and a tap on the lock
+ * slide slides it across to lock, showing red, and back. Neither does
+ * anything else, and neither presses the opener (GarageClicker.vue skips
+ * an `.extra`).
  *
  * Only its picture: GarageClicker.vue is the button, and pushes in its
  * `.bar`.
@@ -11,6 +19,9 @@
 defineProps({
     lit: { type: Boolean, default: false },
 });
+
+const bulbOn = ref(false);
+const locked = ref(false);
 </script>
 
 <template>
@@ -108,20 +119,48 @@ defineProps({
             <path d="M88 118 L94 109 L82 109 Z" fill="#5b4f3c" />
         </g>
 
-        <!-- The light button, a bulb on it, and the lock slide. -->
-        <circle cx="36" cy="164" r="13" fill="url(#gcw-bar)" stroke="#b9a98a" />
-        <circle cx="36" cy="161" r="5" fill="#5b4f3c" />
-        <rect x="33" y="166" width="6" height="4" fill="#5b4f3c" />
-        <rect x="60" y="159" width="44" height="10" rx="5" fill="#5b4f3c" />
-        <rect
-            x="62"
-            y="155"
-            width="16"
-            height="18"
-            rx="3"
-            fill="url(#gcw-bar)"
-            stroke="#b9a98a"
-        />
+        <!-- The light button, a bulb on it: for show, it lights. -->
+        <g
+            class="extra light"
+            :class="{ on: bulbOn }"
+            data-extra="light"
+            @click="bulbOn = !bulbOn"
+        >
+            <circle
+                cx="36"
+                cy="164"
+                r="13"
+                fill="url(#gcw-bar)"
+                stroke="#b9a98a"
+            />
+            <circle class="bulb" cx="36" cy="161" r="5" />
+            <rect class="bulb-base" x="33" y="166" width="6" height="4" />
+        </g>
+
+        <!-- The lock slide: for show, it slides across to lock. -->
+        <g class="extra" data-extra="lock" @click="locked = !locked">
+            <rect x="60" y="159" width="44" height="10" rx="5" fill="#5b4f3c" />
+            <rect
+                class="lock-mark"
+                :class="{ on: locked }"
+                x="64"
+                y="161"
+                width="20"
+                height="6"
+                rx="3"
+            />
+            <rect
+                class="knob"
+                :class="{ locked }"
+                x="62"
+                y="155"
+                width="16"
+                height="18"
+                rx="3"
+                fill="url(#gcw-bar)"
+                stroke="#b9a98a"
+            />
+        </g>
     </svg>
 </template>
 
@@ -144,8 +183,44 @@ defineProps({
     stop-color: #fbbf24;
 }
 
+.bulb,
+.bulb-base {
+    fill: #5b4f3c;
+    transition: fill 150ms;
+}
+
+.light.on .bulb {
+    fill: #fde047;
+    filter: drop-shadow(0 0 4px #facc15);
+}
+
+.light.on .bulb-base {
+    fill: #a16207;
+}
+
+.lock-mark {
+    fill: #5b4f3c;
+    transition: fill 150ms;
+}
+
+.lock-mark.on {
+    fill: #dc2626;
+}
+
+.knob {
+    transition: transform 160ms ease-out;
+}
+
+.knob.locked {
+    transform: translateX(24px);
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .lamp {
+    .lamp,
+    .bulb,
+    .bulb-base,
+    .lock-mark,
+    .knob {
         transition: none;
     }
 }

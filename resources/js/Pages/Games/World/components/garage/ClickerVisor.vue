@@ -1,9 +1,14 @@
 <script setup>
+import { useBlink } from "./useBlink.js";
+
 /**
  * The Garage's car visor remote clicker (issue #227): a grey remote on
  * the clip that holds it to a car's sun visor, three buttons down it. The
  * first, with a garage on it, presses the opener; the others are for
- * show. Its green LED shows the opener's light (`lit`).
+ * show: a tap presses one in, lights its number and blinks the LED, and
+ * nothing else (GarageClicker.vue doesn't press the opener for an
+ * `.extra`).
+ * Its green LED shows the opener's light (`lit`).
  *
  * Only its picture: GarageClicker.vue is the button, and pushes in its
  * `.bar`.
@@ -11,10 +16,21 @@
 defineProps({
     lit: { type: Boolean, default: false },
 });
+
+const { blink, send, blinking } = useBlink();
+
+const SHOW_BUTTONS = [
+    { name: "2", y: 110 },
+    { name: "3", y: 152 },
+];
 </script>
 
 <template>
-    <svg viewBox="0 0 124 200" aria-hidden="true">
+    <svg
+        viewBox="0 0 124 200"
+        aria-hidden="true"
+        style="--led: #4ade80; --led-glow: #22c55e"
+    >
         <defs>
             <linearGradient id="gcv-body" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0" stop-color="#9ca3af" />
@@ -78,20 +94,44 @@ defineProps({
             </g>
         </g>
 
-        <!-- Buttons 2 and 3, for show, and their numbers. -->
-        <g fill="url(#gcv-key)" stroke="#111827">
-            <rect x="28" y="110" width="68" height="34" rx="9" />
-            <rect x="28" y="152" width="68" height="34" rx="9" />
-        </g>
+        <!-- Buttons 2 and 3, for show. They blink the LED. -->
+        <circle
+            v-if="blink"
+            :key="blink.n"
+            class="blink"
+            cx="62"
+            cy="32"
+            r="3.5"
+        />
         <g
-            fill="#d1d5db"
-            font-family="ui-sans-serif, system-ui, sans-serif"
-            font-size="18"
-            font-weight="700"
-            text-anchor="middle"
+            v-for="b in SHOW_BUTTONS"
+            :key="b.name"
+            class="extra"
+            :class="{ sending: blinking(b.name) }"
+            :data-extra="b.name"
+            @click="send(b.name)"
         >
-            <text x="62" y="133">2</text>
-            <text x="62" y="175">3</text>
+            <rect
+                x="28"
+                :y="b.y"
+                width="68"
+                height="34"
+                rx="9"
+                fill="url(#gcv-key)"
+                stroke="#111827"
+            />
+            <text
+                class="glyph"
+                x="62"
+                :y="b.y + 23"
+                fill="#d1d5db"
+                font-family="ui-sans-serif, system-ui, sans-serif"
+                font-size="18"
+                font-weight="700"
+                text-anchor="middle"
+            >
+                {{ b.name }}
+            </text>
         </g>
     </svg>
 </template>

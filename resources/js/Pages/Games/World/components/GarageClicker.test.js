@@ -43,6 +43,39 @@ describe("GarageClicker", () => {
         }
     );
 
+    it.each([
+        ["fob", "lock"],
+        ["fob", "unlock"],
+        ["visor", "2"],
+        ["visor", "3"],
+    ])(
+        "blinks the %s clicker's LED from its %s button without pressing the opener",
+        async (clicker, name) => {
+            const wrapper = mountClicker({ clicker });
+            expect(wrapper.find(".blink").exists()).toBe(false);
+            const extra = wrapper.get(`[data-extra="${name}"]`);
+            await extra.trigger("click");
+            expect(presses(wrapper)).toBe(0);
+            expect(wrapper.find(".blink").exists()).toBe(true);
+            expect(extra.classes()).toContain("sending");
+            expect(wrapper.find(".lamp.on").exists()).toBe(false);
+        }
+    );
+
+    it("lights the wall clicker's bulb and slides its lock without pressing the opener", async () => {
+        const wrapper = mountClicker({ clicker: "wall" });
+        const light = wrapper.get('[data-extra="light"]');
+        await light.trigger("click");
+        expect(light.classes()).toContain("on");
+        await light.trigger("click");
+        expect(light.classes()).not.toContain("on");
+
+        await wrapper.get('[data-extra="lock"]').trigger("click");
+        expect(wrapper.get(".knob").classes()).toContain("locked");
+        expect(wrapper.get(".lock-mark").classes()).toContain("on");
+        expect(presses(wrapper)).toBe(0);
+    });
+
     it("asks for the next clicker and the next door from its swap buttons", async () => {
         const wrapper = mountClicker({ clicker: "wall" });
         await wrapper
