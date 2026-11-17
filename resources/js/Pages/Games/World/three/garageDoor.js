@@ -1,4 +1,4 @@
-import { sectionPoses } from "../scenes/garageDoorLayout.js";
+import { sectionPoses, topEdge } from "../scenes/garageDoorLayout.js";
 import { canvasTexture } from "./useWorldRenderer.js";
 import { worldNight, worldTheme } from "./themes.js";
 
@@ -28,6 +28,11 @@ const BACKDROP_Z = 1.5;
 // track and `up` off the door's top. Its light hangs under its lens
 // (`light`, which the room moves the opener's lamp to).
 const UNIT = { w: 70, h: 36, d: 60, out: 50, up: 36 };
+// The emergency release: red, hanging from the trolley down to its
+// handle `bottom` up (still over the Butt's head), the trolley `z` out
+// past the door's top edge on its arm.
+const RELEASE = "#dc2626";
+const ROPE = { bottom: 230, z: 22 };
 const PX = 512; // the backdrop's canvas, across
 
 /** Paints the driveway out of the opening, `w` × `h` px, in look `look`
@@ -106,14 +111,17 @@ export function garageDoor(THREE, door, { theme, wallHeight }) {
     const group = new THREE.Group();
     const material = (color, more = {}) =>
         new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...more });
-    const box = (size, mat, at, parent = group) => {
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), mat);
+    // `casts` false for what's too thin to cast a shadow worth its draw.
+    const add = (geometry, mat, at, parent = group, casts = true) => {
+        const mesh = new THREE.Mesh(geometry, mat);
         mesh.position.set(...at);
-        mesh.castShadow = true;
+        mesh.castShadow = casts;
         mesh.receiveShadow = true;
         parent.add(mesh);
         return mesh;
     };
+    const box = (size, mat, at, parent) =>
+        add(new THREE.BoxGeometry(...size), mat, at, parent);
 
     // Out through the opening: the day's driveway, and the night's over
     // it, as dark mode falls (setNight()). Unlit, as a view outside is.
@@ -197,7 +205,30 @@ export function garageDoor(THREE, door, { theme, wallHeight }) {
     }
     const unitAt = h + up + UNIT.h / 2;
     const rail = out + h - UNIT.d / 2;
-    box([6, 6, rail], steel, [0, h + 16, rail / 2]);
+    const railY = h + 16;
+    box([6, 6, rail], steel, [0, railY, rail / 2]);
+    // The trolley on the rail, which the opener pulls along with the
+    // door's top (show()), and hanging from it the red emergency release
+    // rope with its T handle.
+    const trolley = new THREE.Group();
+    group.add(trolley);
+    box([12, 10, 18], steel, [0, railY, 0], trolley);
+    const red = material(RELEASE, { roughness: 0.7 });
+    const rope = railY - ROPE.bottom;
+    add(
+        new THREE.CylinderGeometry(0.9, 0.9, rope, 8),
+        red,
+        [0, ROPE.bottom + rope / 2, 0],
+        trolley,
+        false
+    );
+    add(
+        new THREE.CylinderGeometry(2.4, 2.4, 16, 12).rotateZ(Math.PI / 2),
+        red,
+        [0, ROPE.bottom - 2, 0],
+        trolley,
+        false
+    );
     // The opener on its straps from the ceiling, and its lens under it,
     // lit while its light is on.
     const unitZ = h + out;
@@ -228,6 +259,8 @@ export function garageDoor(THREE, door, { theme, wallHeight }) {
             sections[i].position.set(0, pose.y, pose.z + SECTION_Z);
             sections[i].rotation.x = pose.tilt;
         }
+        // A fixed arm out from the door's top edge.
+        trolley.position.z = topEdge(door, open).z + ROPE.z;
     }
     show(0);
 

@@ -15,6 +15,12 @@ function trackAt(s, h) {
     return s <= h ? { y: s, z: 0 } : { y: h, z: s - h };
 }
 
+/** Where door `door` ({ h })'s top edge is at `open` (0 shut to 1 open):
+ * { y, z }, the point on the track the opener's trolley pulls. */
+export function topEdge({ h }, open) {
+    return trackAt(h + open * h, h);
+}
+
 /** Each of door `door` ({ h, sections })'s sections, bottom first, at
  * `open` (0 shut to 1 open): its bottom edge's { y, z }, and `tilt`, how
  * far it's tipped from upright toward the room (radians, π/2 flat), as a

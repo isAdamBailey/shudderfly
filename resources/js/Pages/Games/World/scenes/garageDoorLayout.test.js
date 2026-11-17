@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sectionPoses } from "./garageDoorLayout.js";
+import { sectionPoses, topEdge } from "./garageDoorLayout.js";
 
 // A door 300 tall in four sections, each 75.
 const door = { w: 560, h: 300, sections: 4 };
@@ -48,5 +48,11 @@ describe("a sectional garage door's sections", () => {
         expect(top.y).toBeCloseTo(255);
         expect(top.z).toBeCloseTo(0);
         expect(top.tilt).toBeCloseTo(Math.atan2(30, 45));
+    });
+
+    it("carry their top edge from the top of the opening out to as deep as the door is tall", () => {
+        expect(topEdge(door, 0)).toEqual({ y: 300, z: 0 });
+        expect(topEdge(door, 0.5)).toEqual({ y: 300, z: 150 });
+        expect(topEdge(door, 1)).toEqual({ y: 300, z: 300 });
     });
 });
