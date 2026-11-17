@@ -107,11 +107,13 @@ const SPOT = { angle: 0.42, penumbra: 0.55, beam: 0.07 };
  * Builds a room from its scene data (`room`: { size, walls, lights,
  * photos, interactables }), with the Butt at `butt` ({ x, z }), in the light of
  * seasonal `theme` (at `night` in dark mode), its EXIT signs reading
- * `exitWord`, a Garage's door in style `garageDoorStyle`. Returns { scene, camera, layout(L), sync(view, dt),
+ * `exitWord`, a Garage's door in style `garageDoorStyle` with
+ * `garageCount` on its opener's readout. Returns { scene, camera,
+ * layout(L), sync(view, dt),
  * animate(id, move), pressKey(id, zone, key), pluckString(id, n, delay),
  * hitDrum(id, edge), setCurtain(id, open), toggleLight(id),
  * setLight(id, on), setNight(on), setGarageDoor(open),
- * setGarageDoorStyle(style), dispose() }.
+ * setGarageDoorStyle(style), setGarageCount(n), dispose() }.
  */
 export function createRoomScene(
     THREE,
@@ -123,6 +125,7 @@ export function createRoomScene(
         night: startAtNight = false,
         exitWord = "Exit",
         garageDoorStyle,
+        garageCount = 0,
     }
 ) {
     const scene = new THREE.Scene();
@@ -583,6 +586,7 @@ export function createRoomScene(
             theme,
             wallHeight: height,
             style: garageDoorStyle,
+            count: garageCount,
         });
     if (garage) {
         garage.group.position.set(room.garageDoor.x, 0, 0);
@@ -1119,6 +1123,10 @@ export function createRoomScene(
         /** Swaps the Garage's door for style `style`, where it was. */
         setGarageDoorStyle(style) {
             garage?.setStyle(style);
+        },
+        /** Shows `n` on the Garage opener's readout. */
+        setGarageCount(n) {
+            garage?.setCount(n);
         },
         /** Night falls (or lifts) over the next frames: dark mode flipped.
          * At nightfall every lamp comes on. */

@@ -46,6 +46,9 @@ const UNIT = { w: 70, h: 36, d: 60, out: 50, up: 36 };
 const RELEASE = "#dc2626";
 const ROPE = { bottom: 230, z: 22 };
 const PX = 512; // the backdrop's canvas, across
+// The opener's readout of how many times the door has gone up: its size
+// on the unit's face, units, and its canvas, px.
+const READOUT = { w: 40, h: 13, px: [160, 52], digits: 4 };
 // The roll-up door: its slats' steel, and how far through they are.
 const SLAT = { color: "#9ca3af", rib: "#6b7280", depth: 3 };
 // The carriage doors: their wood, its trim and iron, how thick they are
@@ -59,6 +62,23 @@ const CARRIAGE = {
     z: 5,
     shade: 0.5,
 };
+
+/** Paints the opener's readout, `w` × `h` px, showing `count`: red
+ * digits, at least READOUT.digits of them, on black. */
+export function paintReadout(ctx, w, h, count) {
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(0, 0, w, h);
+    const text = String(count).padStart(READOUT.digits, "0");
+    // Smaller to fit, once there are more digits than the readout's.
+    const size = Math.min(h * 0.8, (w * 0.9) / (text.length * 0.62));
+    ctx.font = `bold ${size}px ui-monospace, Menlo, monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "#ef4444";
+    ctx.shadowBlur = size / 4;
+    ctx.fillStyle = "#f87171";
+    ctx.fillText(text, w / 2, h / 2 + size * 0.05);
+}
 
 /** Paints the driveway out of the opening, `w` × `h` px, in look `look`
  * (worldTheme() or worldNight()), with stars when it's `night`. */
@@ -414,13 +434,14 @@ export const DOOR_STYLES = {
 };
 
 /** Door `door` ({ w, h, sections }) under a ceiling `wallHeight` up, in
- * the light of seasonal `theme`, in style `style`, shut: { group,
- * show(open), setStyle(style), setNight(n), setLit(on), light }: `light`
+ * the light of seasonal `theme`, in style `style`, shut, its opener's
+ * readout showing `count`: { group, show(open), setStyle(style),
+ * setNight(n), setLit(on), setCount(n), light }: `light`
  * is where the opener's light hangs, just under its lens. */
 export function garageDoor(
     THREE,
     door,
-    { theme, wallHeight, style = "sectional" }
+    { theme, wallHeight, style = "sectional", count = 0 }
 ) {
     const { w, h } = door;
     const { up, out } = UNIT;
@@ -501,6 +522,24 @@ export function garageDoor(
         [0, unitAt - UNIT.h / 2 - 1.5, unitZ]
     );
 
+    // Its readout on the face toward the room, unlit so it reads in the
+    // dark, as an LED does.
+    // One canvas, repainted as the count goes up.
+    const readout = canvasTexture(THREE, ...READOUT.px, () => {});
+    const drawReadout = (n) => {
+        const ctx = readout.image.getContext("2d");
+        if (!ctx) return;
+        paintReadout(ctx, ...READOUT.px, n);
+        readout.needsUpdate = true;
+    };
+    const display = new THREE.Mesh(
+        new THREE.PlaneGeometry(READOUT.w, READOUT.h),
+        new THREE.MeshBasicMaterial({ map: readout })
+    );
+    display.position.set(0, unitAt + 2, unitZ + UNIT.d / 2 + 0.3);
+    group.add(display);
+    drawReadout(count);
+
     const parts = { add, box, material, steel };
     // The sectional door's rail runs out to the opener.
     const rail = { rail: out + h - UNIT.d / 2, railY: h + 16 };
@@ -542,6 +581,8 @@ export function garageDoor(
             dayView.visible = n < 1;
         },
         light: { x: 0, y: unitAt - UNIT.h / 2 - 6, z: unitZ },
+        /** Shows `n` on the opener's readout. */
+        setCount: drawReadout,
         /** Lights the opener's lens, or puts it out. */
         setLit(on) {
             lens.material.emissiveIntensity = on ? 1.8 : 0;

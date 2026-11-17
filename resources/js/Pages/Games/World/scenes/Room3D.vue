@@ -43,6 +43,7 @@ import { MOVE_EVERY_MS } from "../composables/useWorldPresence.js";
 import { hiddenByCurtain } from "../interactions/curtain.js";
 import { autoTriggers } from "../interactions/index.js";
 import { playTick, tickLevel } from "../clockSounds.js";
+import { playGarageClunk, startGarageHum } from "../garageSounds.js";
 import {
     BOOKCASE,
     bookcaseHeight,
@@ -53,6 +54,7 @@ import {
     slotsIn,
 } from "./bookshelf.js";
 import GarageClicker from "../components/GarageClicker.vue";
+import { useGarageCount } from "../composables/useGarageCount.js";
 import { useGarageStyles } from "../composables/useGarageStyles.js";
 import { createOpener } from "./garageOpener.js";
 import { createRoomScene } from "./RoomScene.js";
@@ -423,6 +425,39 @@ watch(garageStyles.door, (style) => {
     props.stage.renderer.invalidate();
 });
 
+// How many times the door has gone all the way up on this device, on
+// the opener's readout.
+const garageCount = useGarageCount();
+watch(garageCount.count, (n) => {
+    graph?.setGarageCount(n);
+    props.stage.renderer.invalidate();
+});
+// Stops the motor's hum, while the door is moving.
+let stopHum = null;
+
+/** Hums while the door moves and stops humming when it doesn't, checked
+ * every frame. Under reduced motion it gets there at once, so it doesn't
+ * hum at all. */
+function humOpener() {
+    const humming = opener.moving && !reduced.value;
+    // Only once audio's running: nobody pressed anything this frame.
+    if (humming && !stopHum && audioRunning()) stopHum = startGarageHum();
+    if (!humming) quietOpener();
+}
+
+/** Stops the motor's hum, if it's humming. */
+function quietOpener() {
+    stopHum?.();
+    stopHum = null;
+}
+
+/** The door's got to the top or bottom (`end`): it clunks, and going all
+ * the way up counts. */
+function openerArrived(end) {
+    if (audioRunning()) playGarageClunk();
+    if (end === "open") garageCount.opened();
+}
+
 /** Shows where the opener has the door and its light. */
 function showOpener() {
     graph?.setGarageDoor(opener.position);
@@ -433,7 +468,8 @@ function showOpener() {
 }
 
 /** Presses the Garage door's button (ctx.pressGarageDoor, or the
- * clicker): the door starts, stops or turns back. */
+ * clicker): the door starts, stops or turns back. Whatever was pressed
+ * makes its own sound. */
 function pressGarageDoor() {
     if (!opener) return;
     opener.press();
@@ -462,6 +498,7 @@ onMounted(() => {
         night: dark.value,
         exitWord: t("games.world.exit_sign"),
         garageDoorStyle: garageStyles.door.value,
+        garageCount: garageCount.count.value,
     });
     // Other props can use the same swing hook for animation (the bath's
     // bubbles, for example), but only pendulum clocks have a beat to tick.
@@ -484,6 +521,8 @@ onMounted(() => {
         tickClocks(from);
         const door = opener?.tick(dt, reduced.value);
         if (door?.changed) showOpener();
+        if (opener) humOpener();
+        if (door?.arrived) openerArrived(door.arrived);
         const changed = graph.sync(
             {
                 butt,
@@ -524,6 +563,7 @@ onBeforeUnmount(() => {
     graph?.dispose();
     graph = null;
     clocks = [];
+    quietOpener();
 });
 
 function setBounds(w, h) {
@@ -1373,6 +1413,9 @@ defineExpose({
         paused.value = true;
         room.halt();
         throwables.drop();
+        // The door waits with the frames, and so does its motor: the next
+        // frame after resume() hums it again.
+        quietOpener();
     },
     resume() {
         paused.value = false;
@@ -1665,6 +1708,7 @@ defineExpose({
                 v-if="opener"
                 :clicker="garageStyles.clicker.value"
                 :lit="openerLit"
+                :frozen="room.state.frozen"
                 @press="onClicker"
                 @next-clicker="swapGarage(garageStyles.nextClicker)"
                 @next-door="swapGarage(garageStyles.nextDoor)"

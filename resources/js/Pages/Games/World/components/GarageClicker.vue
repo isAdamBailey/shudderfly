@@ -6,6 +6,7 @@ import ClickerKeypad from "./garage/ClickerKeypad.vue";
 import ClickerVisor from "./garage/ClickerVisor.vue";
 import ClickerWall from "./garage/ClickerWall.vue";
 import { BLINK_MS } from "./garage/useBlink.js";
+import { playGarageClick } from "../garageSounds.js";
 
 /**
  * The Garage's clicker (issue #227), on screen the whole time you're in
@@ -16,14 +17,17 @@ import { BLINK_MS } from "./garage/useBlink.js";
  * one to the next door (`next-door`).
  *
  * The keypad is its own keys; every other clicker is a picture this makes
- * one button of, pushing in the picture's `.bar` on a press. A picture's
+ * one button of, pushing in the picture's `.bar` and clicking
+ * (garageSounds.js) on a press. A picture's
  * for-show buttons (`.extra`) don't press the opener: they press in on
  * their own, and this draws their blink (garage/useBlink.js) in the
  * picture's `--led` colour.
  */
-defineProps({
+const props = defineProps({
     clicker: { type: String, default: "wall" },
     lit: { type: Boolean, default: false },
+    // While the room's frozen (a card is up), a press does nothing.
+    frozen: { type: Boolean, default: false },
 });
 const emit = defineEmits(["press", "next-clicker", "next-door"]);
 const { t } = useTranslations();
@@ -38,12 +42,14 @@ const PICTURES = {
 const pushed = ref(false);
 let release = null;
 function press(event) {
+    if (props.frozen) return;
     // A for-show button does its own thing, not the opener.
     const extra = event.target.closest?.(".extra");
     if (extra && event.currentTarget.contains(extra)) return;
     pushed.value = true;
     clearTimeout(release);
     release = setTimeout(() => (pushed.value = false), 180);
+    playGarageClick();
     emit("press");
 }
 onBeforeUnmount(() => clearTimeout(release));
@@ -55,6 +61,7 @@ onBeforeUnmount(() => clearTimeout(release));
             <ClickerKeypad
                 v-if="clicker === 'keypad'"
                 :lit="lit"
+                :frozen="frozen"
                 @press="emit('press')"
             />
             <button

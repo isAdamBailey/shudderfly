@@ -33,6 +33,19 @@ describe("GarageClicker", () => {
         expect(presses(wrapper)).toBe(1);
     });
 
+    it("does nothing while the room's frozen", async () => {
+        const wrapper = mountClicker({ clicker: "wall", frozen: true });
+        await wrapper.get(`[aria-label="${LABEL}"]`).trigger("click");
+        await wrapper.setProps({ clicker: "keypad" });
+        const key = (name) =>
+            wrapper.get(`[aria-label="${LABEL}"] [data-key="${name}"]`);
+        for (const digit of ["1", "2", "3", "4"]) {
+            await key(digit).trigger("click");
+        }
+        await key("enter").trigger("click");
+        expect(presses(wrapper)).toBe(0);
+    });
+
     it.each(CLICKERS)(
         "shows the opener's light on its %s clicker's lamp",
         async (clicker) => {

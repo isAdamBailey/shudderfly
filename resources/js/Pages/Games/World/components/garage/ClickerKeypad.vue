@@ -1,16 +1,20 @@
 <script setup>
 import { ref } from "vue";
 import { useTranslations } from "@/composables/useTranslations";
+import { playGarageBeep } from "../../garageSounds.js";
 import { CODE_LENGTH, createKeypad } from "../garageKeypad.js";
 
 /**
  * The Garage's outdoor keypad clicker (issue #227), the kind on the wall
  * outside a garage: any four digits and Enter press the opener (`press`;
  * garageKeypad.js), a dot lighting for each digit in. Its lamp shows the
- * opener's light (`lit`), and the keys glow with it.
+ * opener's light (`lit`), and the keys glow with it. Every key beeps
+ * (garageSounds.js), Enter higher when it opens.
  */
-defineProps({
+const props = defineProps({
     lit: { type: Boolean, default: false },
+    // While the room's frozen, the keys do nothing.
+    frozen: { type: Boolean, default: false },
 });
 const emit = defineEmits(["press"]);
 const { t } = useTranslations();
@@ -21,12 +25,16 @@ const entered = ref(0);
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 function digit() {
+    if (props.frozen) return;
+    playGarageBeep();
     keypad.digit();
     entered.value = keypad.entered;
 }
 
 function enter() {
+    if (props.frozen) return;
     const opens = keypad.enter();
+    playGarageBeep(opens);
     entered.value = keypad.entered;
     if (opens) emit("press");
 }
