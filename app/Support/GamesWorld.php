@@ -192,6 +192,14 @@ final class GamesWorld
      * it (useRoom.js) and plays them from in front. */
     public const STAGE = ['h' => 30, 'd' => 180];
 
+    /** The Garage's door (three/garageDoor.js draws it), in the middle of
+     * its back wall: `w` across and `h` up, under the season's
+     * decorations, in hinged `sections` that roll up and back under the
+     * ceiling. The opener hangs from the ceiling past the end of the
+     * track, the room's `light` lamp hung under it by the room
+     * (RoomScene.js), wherever this says. */
+    public const GARAGE_DOOR = ['w' => 560, 'h' => 300, 'sections' => 4, 'light' => 'opener'];
+
     /** Where a spotlight (three/spotlight.js) hangs from the curtain's
      * valance: `y` its foot, `size` tall, `z` just out in front of the
      * curtain, and the stage floor it shines at, `aim` out from the back
@@ -243,7 +251,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'microwave', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry', 'movie-podium'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'microwave', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry', 'movie-podium', 'pegboard', 'garage-button'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -262,6 +270,8 @@ final class GamesWorld
         'sound-altar' => ['w' => 0.95, 'd' => 0.58],
         'exhibit-entry' => ['w' => 0.96, 'd' => 0.2],
         'movie-podium' => ['w' => 0.55, 'd' => 0.35],
+        'pegboard' => ['w' => 1.6, 'd' => 0.06],
+        'garage-button' => ['w' => 0.62, 'd' => 0.12],
     ];
 
     /** Frames a wall picture or a room's photo can hang in (its
@@ -347,6 +357,10 @@ final class GamesWorld
         $fridge = 264;
         $oven = 560;
         $worktop = ['y' => self::KITCHEN_COUNTER['h'], 'z' => intdiv(self::KITCHEN_COUNTER['d'], 2)];
+        // The garage (issue #227): its door across the back wall, where
+        // you come in facing, the way back to the hall behind you.
+        $garage = ['w' => self::ROOM_FRAME, 'd' => 500];
+        $onGarage = fn (string $wall, array $thing) => self::onWall($wall, $garage, $thing);
 
         return [
             'road' => [
@@ -394,6 +408,8 @@ final class GamesWorld
                 self::roomDoor('bedroom-door', 300, 'house.bedroom', 'hall-door', 'house_bedroom', wall: 'left', size: $hall),
                 self::roomDoor('bathroom-door', 200, 'house.bathroom', 'hall-door', 'house_bathroom', wall: 'right', size: $hall),
                 self::roomDoor('kitchen-door', 200, 'house.kitchen', 'hall-door', 'house_kitchen', wall: 'front', size: $hall),
+                // The garage, beside the front door, between the first two clocks.
+                self::roomDoor('garage-door', 310, 'house.garage', 'hall-door', 'house_garage'),
                 // A toy plays `move`, toots as `toot` (a cast id), says `line`
                 // and switches `light`, whichever it has. `y` lifts one off the
                 // floor (onto a wall).
@@ -449,6 +465,40 @@ final class GamesWorld
                     ['grapes', 'apple', 'blueberries'],
                     [690, 770, 845],
                 ),
+            ]),
+            // The Garage: press the button on the right wall and its door
+            // rolls up (or down, or stops) on the back wall, showing the
+            // driveway out past it. You can't go out that way. The opener
+            // hangs from the ceiling past the end of the door's track, its
+            // light lit by the opener, not a switch (`nightfall: false`), and shown
+            // on the button too, and on the clicker that stays on screen
+            // while you're here (Room3D.vue). Tools hang on the pegboard.
+            'house.garage' => self::room('house_garage', [
+                'size' => $garage,
+                'spawn' => ['x' => 620, 'z' => 330],
+                'walls' => ['back' => 'plaster', 'sides' => 'brick', 'floor' => 'concrete'],
+                'garageDoor' => ['x' => intdiv($garage['w'], 2), ...self::GARAGE_DOOR],
+                'lights' => [
+                    self::lamp('lamp', intdiv($garage['w'], 2), 420, 230),
+                    // The opener's, lit by it, not a switch or nightfall.
+                    [
+                        ...self::lamp(self::GARAGE_DOOR['light'], intdiv($garage['w'], 2), self::GARAGE_DOOR['h'], self::GARAGE_DOOR['h']),
+                        'color' => '#fff4d6',
+                        'intensity' => 1,
+                        'nightfall' => false,
+                    ],
+                ],
+            ], [
+                [
+                    ...self::roomDoor('hall-door', 250, 'house.hall', 'garage-door', 'house_hall', exit: true, wall: 'front', size: $garage),
+                    'arriveFacing' => 'back',
+                ],
+                $onGarage('front', self::toy('light-switch', 420, 0, '💡', 'light_switch', ['y' => 120, 'size' => 50, 'move' => 'wiggle', 'light' => ['lamp']])),
+                $onGarage('right', [
+                    ...self::toy('garage-button', 170, 0, null, 'garage_button', ['y' => 110, 'size' => 60, 'model' => 'garage-button', 'light' => ['opener']]),
+                    'type' => 'garage_button',
+                ]),
+                $onGarage('left', self::toy('pegboard', 250, 0, null, 'pegboard', ['y' => 130, 'size' => 120, 'model' => 'pegboard', 'move' => 'wiggle'])),
             ]),
             'house.bathroom' => self::room('house_bathroom', [
                 // A compact footprint gives the fixtures room to breathe

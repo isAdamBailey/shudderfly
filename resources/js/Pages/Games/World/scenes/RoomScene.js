@@ -21,6 +21,7 @@ import { clockFinish, clockTexture } from "../three/clockFaces.js";
 import { MODELS } from "../three/models.js";
 import { createOtherPuppets } from "../three/otherPuppets.js";
 import { bassDrum } from "../three/bassDrum.js";
+import { garageDoor } from "../three/garageDoor.js";
 import { harp } from "../three/harp.js";
 import { pipeOrgan } from "../three/pipeOrgan.js";
 import { stageCurtain } from "../three/stageCurtain.js";
@@ -109,7 +110,7 @@ const SPOT = { angle: 0.42, penumbra: 0.55, beam: 0.07 };
  * `exitWord`. Returns { scene, camera, layout(L), sync(view, dt),
  * animate(id, move), pressKey(id, zone, key), pluckString(id, n, delay),
  * hitDrum(id, edge), setCurtain(id, open), toggleLight(id),
- * setNight(on), dispose() }.
+ * setLight(id, on), setNight(on), setGarageDoor(open), dispose() }.
  */
 export function createRoomScene(
     THREE,
@@ -185,6 +186,7 @@ export function createRoomScene(
         fill.intensity = DAYLIGHT_INTENSITY.fill * day * dim;
         key.color.set(daylight.key).lerp(scratch.set(NIGHT.key), toward);
         key.intensity = DAYLIGHT_INTENSITY.key * day * dim;
+        garage?.setNight(n);
         showButtGlow();
     }
 
@@ -202,6 +204,9 @@ export function createRoomScene(
     // bulb, so the light is moved onto that glyph (below); a lamp no toy
     // is the bulb of may be drawn as its own `emoji`. A lamp with a `spot`
     // is a spotlight, shining down at it, its beam drawn in the air (below).
+    // A lamp with `nightfall: false` (the Garage's opener light) is
+    // something else's to light (setLight()): off until then, and left
+    // alone at nightfall.
     const lamps = (room.lights ?? []).map((data) => {
         const intensity = data.intensity * LAMP_REACH;
         const light = data.spot
@@ -220,7 +225,14 @@ export function createRoomScene(
             light.target.position.set(data.spot.x, data.spot.y, data.spot.z);
             made.add(light.target);
         }
-        return { data, light, intensity, on: true, bulb: false, beam: null };
+        return {
+            data,
+            light,
+            intensity,
+            on: data.nightfall !== false,
+            bulb: false,
+            beam: null,
+        };
     });
     // Things that glow while any of their lamps is on: { lamps, set(on) }.
     const glows = [];
@@ -561,6 +573,23 @@ export function createRoomScene(
     for (const unit of counters) {
         builtIn(unit, (u) => kitchenCounterGeometry(THREE, u));
     }
+    // The Garage's door in its back wall, the opener over it and the
+    // driveway out past it, all hidden with the wall.
+    const garage =
+        room.garageDoor &&
+        garageDoor(THREE, room.garageDoor, { theme, wallHeight: height });
+    if (garage) {
+        garage.group.position.set(room.garageDoor.x, 0, 0);
+        made.add(garage.group);
+        hang("back", garage.group);
+        // The opener's light hangs under its lens, which glows with it.
+        const lens = lampsOf([room.garageDoor.light]);
+        for (const lamp of lens) {
+            const at = garage.light;
+            lamp.light.position.set(room.garageDoor.x + at.x, at.y, at.z);
+        }
+        if (lens.length > 0) glows.push({ lamps: lens, set: garage.setLit });
+    }
     // The stage, along the back wall and hidden with it; the chairs stand
     // in the room.
     if (room.stage) {
@@ -600,6 +629,9 @@ export function createRoomScene(
     // Each modelled thing that swings (a clock's pendulum), where it
     // stands, with its userData: swing and beat.
     const swings = [];
+    // Each modelled thing that can be pressed in (the Garage door's
+    // button), by id: its press plays out on its swing.
+    const pressers = new Map();
     // Instruments (INSTRUMENTS), by id: built into the room, but played,
     // so they're ticked. A stage's curtain is ticked as it's drawn.
     const instruments = new Map();
@@ -650,6 +682,7 @@ export function createRoomScene(
         if (model?.userData.setOn && !item.light) {
             switches.set(item.id, model.userData.setOn);
         }
+        if (model?.userData.press) pressers.set(item.id, model.userData.press);
         if (model?.userData.swing) {
             swings.push({ ...model.userData, x: item.x, z: item.z ?? 0 });
         }
@@ -1041,6 +1074,10 @@ export function createRoomScene(
         hitDrum(id, edge = 0) {
             instruments.get(id)?.hit?.(edge);
         },
+        /** Presses modelled thing `id` in (the Garage door's button). */
+        press(id) {
+            pressers.get(id)?.();
+        },
         /** Draws curtain `id` open (or shut) over the next frames. */
         setCurtain(id, open) {
             curtains.get(id)?.setOpen(open);
@@ -1063,12 +1100,25 @@ export function createRoomScene(
             showLamps();
             return on;
         },
+        /** Switches room light `id` on or off, as whatever lights it says
+         * (the Garage's opener). */
+        setLight(id, on) {
+            for (const lamp of lampsOf([id])) lamp.on = on;
+            showLamps();
+        },
+        /** Lays the Garage's door out `open` of the way up. */
+        setGarageDoor(open) {
+            garage?.show(open);
+        },
         /** Night falls (or lifts) over the next frames: dark mode flipped.
          * At nightfall every lamp comes on. */
         setNight(on) {
             nightTarget = on ? 1 : 0;
             if (!on) return;
-            for (const lamp of lamps) lamp.on = true;
+            // Every lamp but those something else lights.
+            for (const lamp of lamps) {
+                if (lamp.data.nightfall !== false) lamp.on = true;
+            }
             showLamps();
         },
         dispose() {

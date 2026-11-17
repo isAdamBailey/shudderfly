@@ -967,4 +967,29 @@ describe("the room's scene graph", () => {
             });
         });
     });
+
+    it("leaves a lamp something else lights off, at nightfall too, till it's set", () => {
+        const room = {
+            ...hall,
+            lights: [
+                ...hall.lights,
+                { ...hall.lights[0], id: "opener", nightfall: false },
+            ],
+        };
+        const graph = build(room);
+        const lights = graph.scene.getObjectsByProperty("isPointLight", true);
+        expect(lights.map((light) => light.intensity > 0)).toEqual([
+            true,
+            false,
+        ]);
+        graph.setNight(true);
+        expect(lights.map((light) => light.intensity > 0)).toEqual([
+            true,
+            false,
+        ]);
+        graph.setLight("opener", true);
+        expect(lights[1].intensity).toBeGreaterThan(0);
+        graph.setLight("opener", false);
+        expect(lights[1].intensity).toBe(0);
+    });
 });

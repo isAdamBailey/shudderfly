@@ -2,10 +2,12 @@ import { radioModel } from "./antiqueRadio.js";
 import { armchairModel } from "./armchair.js";
 import { bathtubModel } from "./bathtub.js";
 import { fridgeModel } from "./fridge.js";
+import { garageButtonModel } from "./garageButton.js";
 import { grandfatherClockModel } from "./grandfatherClock.js";
 import { microwaveModel } from "./microwave.js";
 import { moviePodiumModel } from "./moviePodium.js";
 import { ovenModel } from "./oven.js";
+import { pegboardModel } from "./pegboard.js";
 import { exhibitEntryModel } from "./exhibitEntry.js";
 import { slotMachineModel } from "./slotMachine.js";
 import { soundAltarModel } from "./soundAltar.js";
@@ -38,4 +40,6 @@ export const MODELS = {
     "sound-altar": soundAltarModel,
     "exhibit-entry": exhibitEntryModel,
     "movie-podium": moviePodiumModel,
+    pegboard: pegboardModel,
+    "garage-button": garageButtonModel,
 };
