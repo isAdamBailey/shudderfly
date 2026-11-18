@@ -152,6 +152,10 @@ final class GamesWorld
      * hang on his wall. */
     public const GUSTER_SEARCH = 'guster';
 
+    /** What the Garage searches the family's pages for: photos of garages
+     * hang on its walls. */
+    public const GARAGE_SEARCH = 'garage';
+
     /** Guster's hello, a recording on the Sounds page ("guster hello"): its
      * S3 key, his toot when he's tapped (the puff with it). Only production has
      * the file: elsewhere his toot falls back to the fart. */
@@ -496,11 +500,17 @@ final class GamesWorld
             // hangs from the ceiling past the end of the door's track, its
             // light lit by the opener, not a switch (`nightfall: false`), and shown
             // on the button too, and on the clicker that stays on screen
-            // while you're here (Room3D.vue). Tools hang on the pegboard.
+            // while you're here (Room3D.vue). Tools hang on the pegboard,
+            // and photos of garages (pages that mention one), a new set each
+            // day, on the front and right walls.
             'house.garage' => self::room('house_garage', [
                 'size' => $garage,
                 'spawn' => ['x' => 620, 'z' => 330],
                 'walls' => ['back' => 'plaster', 'sides' => 'brick', 'floor' => 'concrete'],
+                'photos' => array_map(
+                    fn ($at) => $onGarage($at[1], self::photoFrame($at[0], $at[2], 150, 130, 100, ['search' => self::GARAGE_SEARCH], 'ornate')),
+                    [['garage-1', 'front', 620], ['garage-2', 'front', 800], ['garage-3', 'right', 360]],
+                ),
                 'garageDoor' => ['x' => intdiv($garage['w'], 2), ...self::GARAGE_DOOR],
                 'lights' => [
                     self::lamp('lamp', intdiv($garage['w'], 2), 420, 230),

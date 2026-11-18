@@ -1829,6 +1829,18 @@ class GamesWorldScenesTest extends TestCase
         $this->assertPhotosHangClear('guster-house.hall');
     }
 
+    public function test_the_garage_hangs_photos_of_garages_clear_of_its_doors_switch_and_button(): void
+    {
+        $room = GamesWorld::definitions()['house.garage'];
+
+        $this->assertCount(3, $room['photos']);
+        foreach ($room['photos'] as $photo) {
+            $this->assertSame(['search' => GamesWorld::GARAGE_SEARCH], $photo['from']);
+            $this->assertSame('ornate', $photo['image']['frame']);
+        }
+        $this->assertPhotosHangClear('house.garage');
+    }
+
     /** Guster's House's photos' pictures, as the page gets them. */
     private function gusterPhotos(): array
     {
