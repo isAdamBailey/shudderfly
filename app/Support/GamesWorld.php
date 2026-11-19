@@ -249,7 +249,7 @@ final class GamesWorld
 
     /** The minigames a `minigame` interactable may start:
      * World/minigames/index.js (a Vitest test keeps them in step). */
-    public const MINIGAMES = ['toot-catch', 'toot-slots'];
+    public const MINIGAMES = ['toot-catch', 'toot-slots', 'butts-not-working'];
 
     /** Clock faces a hall clock may wear: three/clockFaces.js (a Vitest test
      * keeps them in step). */
@@ -262,7 +262,7 @@ final class GamesWorld
 
     /** Props modelled in 3D that an interactable's `model` may name:
      * three/models.js (a Vitest test keeps them in step). */
-    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'microwave', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry', 'movie-podium', 'pegboard', 'garage-button'];
+    public const MODELS = ['radio', 'table-lamp', 'slot-machine', 'fridge', 'oven', 'microwave', 'washing-machine', 'grandfather-clock', 'armchair', 'spotlight', 'toilet', 'bathtub', 'toilet-roll', 'sound-altar', 'exhibit-entry', 'movie-podium', 'pegboard', 'garage-button', 'toolbox'];
 
     /** What a model that stands on the floor takes up, per unit of its
      * size: `w` across and `d` out from the wall, three/footprints.js's (a
@@ -283,6 +283,7 @@ final class GamesWorld
         'movie-podium' => ['w' => 0.55, 'd' => 0.35],
         'pegboard' => ['w' => 1.6, 'd' => 0.06],
         'garage-button' => ['w' => 0.62, 'd' => 0.12],
+        'toolbox' => ['w' => 1.5, 'd' => 0.75],
     ];
 
     /** Frames a wall picture or a room's photo can hang in (its
@@ -339,6 +340,8 @@ final class GamesWorld
         // Guster's hall: no wider than the frame now his photos and slot
         // machine hang round the walls.
         $gusterHall = ['w' => self::ROOM_FRAME, 'd' => 450];
+        // The Butt's bathroom, its toolbox against the right wall.
+        $bathroom = ['w' => 760, 'd' => 450];
         $gusterOn = fn (string $wall, array $thing) => self::onWall($wall, $gusterHall, $thing);
         // His Farts & Sounds Exhibit, off the living room: as big.
         $exhibit = $gusterHall;
@@ -555,7 +558,7 @@ final class GamesWorld
             'house.bathroom' => self::room('house_bathroom', [
                 // A compact footprint gives the fixtures room to breathe
                 // without making the bathroom feel like a hallway.
-                'size' => ['w' => 760, 'd' => 450],
+                'size' => $bathroom,
                 // Start in the open aisle between the bath and toilet.
                 'spawn' => ['x' => 500, 'z' => 180],
                 'walls' => ['back' => 'tiles', 'front' => 'tiles', 'floor' => 'tiles'],
@@ -569,6 +572,9 @@ final class GamesWorld
                 // Keep the bath on a side wall: it remains visible while
                 // facing the toilet, with a wide aisle between the fixtures.
                 self::toy('bathtub', 0, 260, null, 'bathtub', ['size' => 200, 'model' => 'bathtub', 'wall' => 'left']),
+                // The plumber's toolbox, left on the floor by the right wall:
+                // the poop is stuck, and the Butt needs fixing.
+                self::onWall('right', $bathroom, self::minigame('butts-not-working', 300, 20, '🧰', ['size' => 70, 'model' => 'toolbox', 'titled' => false])),
             ]),
             'house.bedroom' => self::room('house_bedroom', [
                 'size' => ['w' => 900, 'd' => 500],

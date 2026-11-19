@@ -4,6 +4,7 @@ import CastMember from "@/Components/Games/Cast/CastMember.vue";
 import { createCastKit } from "@/Components/Games/Cast/three/castMesh.js";
 import TootPuff from "@/Components/Games/Cast/TootPuff.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
+import CastPuppet from "./CastPuppet.vue";
 import {
     speakGameIntro,
     stopGameIntroSpeech,
@@ -54,6 +55,7 @@ const motion = usePreferredReducedMotion();
 
 const kit = {
     CastMember,
+    CastPuppet,
     createCastKit,
     toot,
     speak: speakGameIntro,

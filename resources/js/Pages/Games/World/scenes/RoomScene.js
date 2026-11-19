@@ -2,6 +2,7 @@ import { CAST_MOVES } from "@/constants/characters.js";
 import { approach } from "@/utils/math";
 import { own } from "@/utils/object";
 import {
+    DAYLIGHT_INTENSITY,
     lookMaterial,
     NIGHT,
     roomDaylight,
@@ -71,11 +72,6 @@ const SHADOW_MAP = 1024;
 // How far nearer the camera than the floor in view (the layout's `band`)
 // still shows, units: the Butt at the front edge stands out past it.
 const NEAR_SLACK = ROOM_SIZES.butt / 2;
-// The daylight's share of the light: a sky fill and a key that casts the
-// shadows, at `level` in every room (Guster's House's, which got it
-// right). Enough by day to see by with the lamps off; at night (NIGHT.dim)
-// dark enough that the lamps are what light it.
-const DAYLIGHT_INTENSITY = { fill: 2.2, key: 2, level: 0.7 };
 // Lamps fall off with distance (decay 1): this scales an intensity so a
 // lamp has it at about this many units away.
 const LAMP_REACH = 250;

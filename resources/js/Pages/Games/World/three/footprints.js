@@ -38,4 +38,7 @@ export const FOOTPRINTS = {
     pegboard: { w: 1.6, d: 0.06, top: 1 },
     // The Garage door's console, flat on its wall, its push bar proud.
     "garage-button": { w: 0.62, d: 0.12, top: 1 },
+    // The plumber's toolbox on the bathroom floor: things thrown land on
+    // its lid, under the handle.
+    toolbox: { w: 1.5, d: 0.75, top: 0.75 },
 };

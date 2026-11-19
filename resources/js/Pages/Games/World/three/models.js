@@ -15,6 +15,7 @@ import { spotlightModel } from "./spotlight.js";
 import { tableLampModel } from "./tableLamp.js";
 import { toiletModel } from "./toilet.js";
 import { toiletRollModel } from "./toiletRoll.js";
+import { toolboxModel } from "./toolbox.js";
 import { washingMachineModel } from "./washingMachine.js";
 
 // Props modelled in 3D, by the name an interactable's `model` gives
@@ -42,4 +43,5 @@ export const MODELS = {
     "movie-podium": moviePodiumModel,
     pegboard: pegboardModel,
     "garage-button": garageButtonModel,
+    toolbox: toolboxModel,
 };

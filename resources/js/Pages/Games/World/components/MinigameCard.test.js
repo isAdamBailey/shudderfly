@@ -94,6 +94,7 @@ describe("MinigameCard", () => {
         expect(Object.keys(kit).sort()).toEqual(
             [
                 "CastMember",
+                "CastPuppet",
                 "createCastKit",
                 "finish",
                 "playSound",

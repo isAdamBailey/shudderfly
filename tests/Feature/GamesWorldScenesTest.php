@@ -403,6 +403,21 @@ class GamesWorldScenesTest extends TestCase
         $this->assertGreaterThan(0, $slots['y']);
     }
 
+    public function test_the_bathroom_has_butts_not_working_in_the_plumbers_toolbox(): void
+    {
+        $toolbox = collect(GamesWorld::scenes()['house.bathroom']['interactables'])->firstWhere('minigame', 'butts-not-working');
+
+        $this->assertSame('minigame', $toolbox['type']);
+        $this->assertSame('Butts Not Working', $toolbox['label']);
+        $this->assertSame('toolbox', $toolbox['model']);
+        $this->assertSame('You fixed the Butt :score times!', $toolbox['score']);
+        $this->assertFalse($toolbox['titled']);
+        // On the floor by the right wall, clear of the toilet on the back.
+        $this->assertSame('right', $toolbox['wall']);
+        $this->assertSame(300, $toolbox['z']);
+        $this->assertSame(['scene' => 'house.bathroom', 'spot' => 'butts-not-working'], GamesWorld::whereIs('minigame', 'butts-not-working'));
+    }
+
     public function test_gusters_house_is_no_wider_than_the_frame_with_one_switch_for_both_lamps(): void
     {
         $room = GamesWorld::definitions()['guster-house.hall'];

@@ -1,36 +1,14 @@
 import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, ref } from "vue";
-import CastMember from "@/Components/Games/Cast/CastMember.vue";
+import { nextTick } from "vue";
+import {
+    installFrames,
+    makeKit,
+    restoreFrames,
+    run,
+} from "../../testing/minigameHarness.js";
 import TootSlots from "./TootSlots.vue";
 import { LINGER_WON, REEL_STOPS, SPINS } from "./useTootSlots.js";
-
-// Frames by hand: each requestAnimationFrame callback waits for frame().
-let frames = [];
-let now = 0;
-
-function frame(seconds = 1 / 60) {
-    now += seconds * 1000;
-    const due = frames;
-    frames = [];
-    due.forEach((callback) => callback(now));
-}
-
-function run(seconds) {
-    for (let t = 0; t < seconds; t += 1 / 60) frame();
-}
-
-function makeKit(reduced = false) {
-    return {
-        CastMember,
-        createCastKit: vi.fn(),
-        toot: vi.fn(),
-        speak: vi.fn(),
-        playSound: vi.fn(),
-        reducedMotion: ref(reduced),
-        finish: vi.fn(),
-    };
-}
 
 let wrapper;
 
@@ -40,24 +18,14 @@ function mountGame(kit = makeKit()) {
 }
 
 beforeEach(() => {
-    frames = [];
-    now = 0;
-    vi.spyOn(performance, "now").mockImplementation(() => now);
-    vi.stubGlobal("requestAnimationFrame", (callback) => {
-        frames.push(callback);
-        return frames.length;
-    });
-    vi.stubGlobal("cancelAnimationFrame", () => {
-        frames = [];
-    });
+    installFrames();
     // Every pull is a jackpot.
     vi.spyOn(Math, "random").mockReturnValue(0);
 });
 
 afterEach(() => {
     wrapper?.unmount();
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    restoreFrames();
 });
 
 describe("TootSlots", () => {

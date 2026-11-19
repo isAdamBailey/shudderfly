@@ -132,7 +132,7 @@ const at = (x, y) => ({ transform: `translate(${x * 100}%, ${y * 100}%)` });
 
         <div class="catch-spot" :style="at(state.butt.x, BUTT_Y)">
             <component
-                :is="kit.CastMember"
+                :is="kit.CastPuppet"
                 id="butt"
                 ref="buttRef"
                 class="catch-thing catch-butt"

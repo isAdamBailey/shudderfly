@@ -4,7 +4,7 @@ import { playAmbientSound } from "../sounds.js";
 
 // Pixel ratio cap: past 2 a phone pays four times the fill for detail nobody
 // can see (issue #130's performance budget).
-const MAX_PIXEL_RATIO = 2;
+export const MAX_PIXEL_RATIO = 2;
 const MAX_DT = 0.05; // s; a long frame (or a resume) can't teleport anything
 
 let threeModule = null;

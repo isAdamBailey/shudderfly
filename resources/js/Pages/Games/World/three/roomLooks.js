@@ -82,6 +82,13 @@ const DAYLIGHT = {
     fireworks: { sky: "#c7d2fe", ground: "#1e1b4b", key: "#a5b4fc", dim: 0.8 },
 };
 
+// The daylight's share of the light: a sky fill and a key that casts the
+// shadows, at `level` in every room (Guster's House's, which got it
+// right), scaled by a theme's `dim`. Enough by day to see by with the
+// lamps off; at night (NIGHT.dim) dark enough that the lamps are what light
+// it. A minigame's puppet (CastPuppet.vue) takes the everyday level.
+export const DAYLIGHT_INTENSITY = { fill: 2.2, key: 2, level: 0.7 };
+
 /** The daylight colours for `theme`, or the everyday ones. */
 export function roomDaylight(theme) {
     return own(DAYLIGHT, theme) ?? DAYLIGHT[""];

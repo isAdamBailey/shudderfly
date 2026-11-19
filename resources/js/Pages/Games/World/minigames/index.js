@@ -14,6 +14,10 @@ import { own } from "@/utils/object";
  * the host (components/MinigameCard.vue) sizes, and it takes focus itself.
  * `kit` is:
  * - CastMember: the DOM cast drawer, for every character it shows.
+ * - CastPuppet: a character as its lit 3D puppet from the world, on a
+ *   canvas of its own (components/CastPuppet.vue; CastMember where there's
+ *   no WebGL), for the one a minigame is about. Takes `id` and `move`, and
+ *   play(name) plays a one-shot.
  * - createCastKit: the WebGL one (castMesh.js), for a minigame that draws
  *   in three; give it THREE, and dispose of the kit when done.
  * - toot(castId, at): the one toot (useToot), the puff at `at`, { x, y } as
@@ -29,6 +33,7 @@ import { own } from "@/utils/object";
 const MINIGAMES = {
     "toot-catch": () => import("./TootCatch/TootCatch.vue"),
     "toot-slots": () => import("./TootSlots/TootSlots.vue"),
+    "butts-not-working": () => import("./ButtsNotWorking/ButtsNotWorking.vue"),
 };
 
 export const MINIGAME_NAMES = Object.keys(MINIGAMES);
