@@ -1,9 +1,0 @@
----
-description: Format PHP with Pint via Sail
-globs: **/*.php
-alwaysApply: false
----
-
-# Lint PHP With Sail Pint
-
-Run `sail pint` on changed PHP. Sail is required for all PHP tooling (see the **Use Sail for PHP** rule).
