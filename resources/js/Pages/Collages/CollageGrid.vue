@@ -33,15 +33,16 @@
                 <!-- Show PDF preview in archived view -->
                 <div
                     v-if="collage && collage.preview_path && showScreenshots"
-                    class="h-full w-full bg-white rounded-lg shadow-sm overflow-hidden"
+                    class="h-full w-full overflow-hidden"
                     style="position: relative"
                 >
-                    <!-- Show preview image -->
+                    <!-- Show preview image, square-cornered like the printed
+                         page so its coloured border reaches the corners -->
                     <div class="relative w-full h-full">
                         <img
                             :src="collage.preview_path"
                             :alt="`Collage ${collage.id} preview`"
-                            class="w-full h-full object-contain rounded-lg shadow-sm"
+                            class="w-full h-full object-contain"
                         />
                     </div>
                 </div>

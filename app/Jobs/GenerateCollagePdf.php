@@ -149,14 +149,10 @@ class GenerateCollagePdf implements ShouldQueue
 
             $gridConfig = CollageLayout::grid($actualImageCount);
 
-            // Calculate cell dimensions in inches matching the PDF template (8in x 10.25in with 0.05in gaps)
-            $pdfGap = 0.05;
-            $cellWidthInches = (8 - ($gridConfig['cols'] - 1) * $pdfGap) / $gridConfig['cols'];
-            $cellHeightInches = (10.25 - ($gridConfig['rows'] - 1) * $pdfGap) / $gridConfig['rows'];
-
-            // Convert to pixels at 100 DPI once
-            $targetWidth = (int) ($cellWidthInches * 100);
-            $targetHeight = (int) ($cellHeightInches * 100);
+            // Each picture is fitted to its cell at CollageLayout::DPI
+            $cell = CollageLayout::cell($gridConfig);
+            $targetWidth = (int) ($cell['width'] * CollageLayout::DPI);
+            $targetHeight = (int) ($cell['height'] * CollageLayout::DPI);
 
             // Now process the downloaded images with the correct grid configuration
             $processedImages = [];
@@ -167,8 +163,9 @@ class GenerateCollagePdf implements ShouldQueue
                 // Optimize image before converting to base64
                 $image = Image::decode($localPath);
 
-                // Fit image within cell dimensions while preserving aspect ratio, padding with white
-                $image->contain($targetWidth, $targetHeight, 'ffffff');
+                // Fit image within its cell, keeping its shape and leaving the rest of
+                // the cell empty, so the border behind shows round it
+                $image->scale($targetWidth, $targetHeight);
 
                 // Optimize image quality and convert to JPG
                 $encoded = $image->encode(new JpegEncoder(quality: 80));
@@ -180,6 +177,9 @@ class GenerateCollagePdf implements ShouldQueue
                 $processedImages[] = [
                     'path' => $base64Image,
                     'page' => $page,
+                    // Its size on the page, in inches
+                    'width' => $image->width() / CollageLayout::DPI,
+                    'height' => $image->height() / CollageLayout::DPI,
                 ];
 
                 // Free up memory
@@ -193,6 +193,11 @@ class GenerateCollagePdf implements ShouldQueue
             // Use processed images instead of localImages for PDF generation
             $localImages = $processedImages;
 
+            // The border's colour and the month it was printed, shared by the PDF and its preview
+            $printedOn = Carbon::now(config('app.local_timezone'));
+            $printedAt = $printedOn->format('F Y');
+            $color = CollageLayout::color($printedOn);
+
             // Configure DomPDF for better performance and smaller size
             $pdf = Pdf::setOptions([
                 'isHtml5ParserEnabled' => true,
@@ -205,7 +210,9 @@ class GenerateCollagePdf implements ShouldQueue
             ])->loadView('pdfs.collage', [
                 'collage' => $this->collage,
                 'localImages' => $localImages,
-                'printedAt' => Carbon::now(config('app.timezone'))->format('F Y'),
+                'grid' => $gridConfig,
+                'printedAt' => $printedAt,
+                'color' => $color,
             ]);
 
             // Create collages directory if it doesn't exist
@@ -228,7 +235,7 @@ class GenerateCollagePdf implements ShouldQueue
             $s3Key = "collages/collage-{$this->collage->id}.pdf";
             if (Storage::disk('s3')->put($s3Key, $pdfContent, ['visibility' => 'public'])) {
                 // Generate preview image using the same grid configuration as the PDF
-                $previewImage = $this->generatePreviewImage($localImages, $gridConfig);
+                $previewImage = $this->generatePreviewImage($localImages, $gridConfig, $color, $printedAt);
                 $previewKey = "collages/collage-{$this->collage->id}-preview.jpg";
 
                 // Prepare the update data
@@ -332,85 +339,48 @@ class GenerateCollagePdf implements ShouldQueue
     }
 
     /**
-     * Generate a preview image of the PDF layout.
+     * Generate a preview image of the PDF page, border and month included,
+     * at CollageLayout::DPI, the pictures placed as the PDF places them.
      */
-    protected function generatePreviewImage(array $localImages, array $gridConfig): ?string
+    protected function generatePreviewImage(array $localImages, array $gridConfig, string $color, string $printedAt): ?string
     {
         try {
-            // Use the passed grid configuration (same as PDF) instead of calculating based on downloaded images
-            $config = $gridConfig;
-
-            // Calculate grid capacity (maximum number of images that can fit)
-            $gridCapacity = $config['cols'] * $config['rows'];
-
             // Limit images to grid capacity to match PDF layout exactly
-            $imagesToProcess = array_slice($localImages, 0, $gridCapacity);
+            $imagesToProcess = array_slice($localImages, 0, $gridConfig['cols'] * $gridConfig['rows']);
+            $px = fn (float $inches): int => (int) round($inches * CollageLayout::DPI);
 
-            // Match PDF dimensions: 8.5in x 11in with 0.5in top header and 0.25in margins elsewhere = 8in x 10.25in grid
-            $previewWidth = 800; // 8in * 100 DPI
-            $previewHeight = 1025; // 10.25in * 100 DPI
+            $pageWidth = $px(CollageLayout::PAGE_WIDTH);
+            $pageHeight = $px(CollageLayout::PAGE_HEIGHT);
+            $border = $px(CollageLayout::BORDER);
 
-            // Gap between cells (0.05in * 100 DPI = 5px)
-            $gap = 5;
-
-            // Calculate cell dimensions with gaps (matching PDF template)
-            $cellWidth = ($previewWidth - ($config['cols'] - 1) * $gap) / $config['cols'];
-            $cellHeight = ($previewHeight - ($config['rows'] - 1) * $gap) / $config['rows'];
-
-            // Use GD for compositing instead of Intervention Image
-            $canvas = imagecreatetruecolor($previewWidth, $previewHeight);
+            // The page in the border's colour, white inside it, the pictures over both
+            $canvas = imagecreatetruecolor($pageWidth, $pageHeight);
+            [$r, $g, $b] = sscanf($color, '#%02x%02x%02x');
+            imagefilledrectangle($canvas, 0, 0, $pageWidth - 1, $pageHeight - 1, imagecolorallocate($canvas, $r, $g, $b));
             $white = imagecolorallocate($canvas, 255, 255, 255);
-            imagefill($canvas, 0, 0, $white);
+            imagefilledrectangle($canvas, $border, $border, $pageWidth - $border - 1, $pageHeight - $border - 1, $white);
+
+            $this->drawPrintedAt($canvas, $printedAt, $white, $px(CollageLayout::PICTURES_TOP));
+
+            $placements = CollageLayout::placements($gridConfig, $imagesToProcess);
 
             foreach ($imagesToProcess as $index => $imageData) {
-                $base64Image = $imageData['path'];
-
-                // Decode base64 image
-                $imageBytes = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64Image));
-
-                // Create image from string using GD
+                $imageBytes = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $imageData['path']));
                 $image = imagecreatefromstring($imageBytes);
 
                 if ($image === false) {
                     continue; // Skip invalid images
                 }
 
-                // Calculate position for the current image (matching PDF template)
-                $row = floor($index / $config['cols']);
-                $col = $index % $config['cols'];
-                $x = $col * ($cellWidth + $gap);
-                $y = $row * ($cellHeight + $gap);
-
-                // Scale image to fit within cell while preserving aspect ratio, centered with white background
-                $srcWidth = imagesx($image);
-                $srcHeight = imagesy($image);
-                $scale = min($cellWidth / $srcWidth, $cellHeight / $srcHeight);
-                $drawWidth = (int) ($srcWidth * $scale);
-                $drawHeight = (int) ($srcHeight * $scale);
-                $drawX = (int) ($x + ($cellWidth - $drawWidth) / 2);
-                $drawY = (int) ($y + ($cellHeight - $drawHeight) / 2);
-
-                imagecopyresampled(
-                    $canvas,
-                    $image,
-                    $drawX, $drawY,
-                    0, 0,
-                    $drawWidth, $drawHeight,
-                    $srcWidth, $srcHeight
-                );
-
-                // Clean up
-                imagedestroy($image);
+                // Already fitted to its cell at this resolution, so copied as is
+                $place = $placements[$index];
+                imagecopy($canvas, $image, $px($place['left']), $px($place['top']), 0, 0, imagesx($image), imagesy($image));
             }
 
-            // Convert to JPEG
             ob_start();
             imagejpeg($canvas, null, 80);
             $jpegData = ob_get_contents();
             ob_end_clean();
-
-            // Clean up
-            imagedestroy($canvas);
 
             return $jpegData;
         } catch (\Exception $e) {
@@ -421,5 +391,33 @@ class GenerateCollagePdf implements ShouldQueue
 
             return null;
         }
+    }
+
+    /**
+     * Write the month it was printed in white, centred in the strip above the pictures,
+     * in the bold DejaVu Sans the PDF uses (it ships with DomPDF).
+     */
+    protected function drawPrintedAt(\GdImage $canvas, string $printedAt, int $white, int $stripHeight): void
+    {
+        $font = base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans-Bold.ttf');
+
+        if (! function_exists('imagettftext') || ! is_file($font)) {
+            return;
+        }
+
+        // GD takes points at 96 DPI; scaled so the text is the PDF's size on this canvas
+        $size = CollageLayout::LABEL_SIZE * CollageLayout::DPI / 96;
+        $box = imagettfbbox($size, 0, $font, $printedAt);
+
+        if ($box === false) {
+            return; // The preview is still worth having without its month
+        }
+
+        $textWidth = $box[2] - $box[0];
+        $textHeight = $box[1] - $box[7];
+        $x = (int) ((imagesx($canvas) - $textWidth) / 2 - $box[0]);
+        $y = (int) (($stripHeight + $textHeight) / 2 - $box[1]);
+
+        imagettftext($canvas, $size, 0, $x, $y, $white, $font, $printedAt);
     }
 }

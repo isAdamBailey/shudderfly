@@ -152,7 +152,7 @@ Many features are toggled via `SiteSetting` records (checked in `Kernel.php` and
 
 ### Collage system
 
-`Collage` → `CollagePage` (pivot) → `Page`. Max pages enforced via `config('collage.max_pages')` (default 16, defined in `App\Support\Collage::MAX_PAGES`). PDF generation is a queued job (`GenerateCollagePdf`) using DomPDF.
+`Collage` → `CollagePage` (pivot) → `Page`. Max pages enforced via `config('collage.max_pages')` (default 16, defined in `App\Support\Collage::MAX_PAGES`). PDF generation is a queued job (`GenerateCollagePdf`) using DomPDF. Each printed page has a coloured border behind the pictures and the month it was printed (local time) in white above them, so a stack of prints can be told apart: the colours are `App\Support\Collage::MONTH_COLORS` (held by a test to white-text contrast and to neighbouring months differing in hue), and the page layout (`area()`, `cell()`, `placements()`, `labelTop()`) is shared by `resources/views/pdfs/collage.blade.php` and the job's GD preview image (shown on the Archived page), so the two match.
 
 ### Tests
 
