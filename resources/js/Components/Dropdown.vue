@@ -37,6 +37,7 @@ const props = defineProps({
 const closeOnEscape = (e) => {
     if (open.value && e.key === "Escape") {
         open.value = false;
+        e.stopImmediatePropagation();
     }
 };
 

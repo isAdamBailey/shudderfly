@@ -70,6 +70,7 @@ class GameController extends Controller
     public function index(Request $request): Response
     {
         $soundsEnabled = SiteSetting::where('key', 'sounds_enabled')->first()?->value ?? false;
+        $soundSort = self::soundSort($request);
 
         // Closures, so a request back for only the flash (an invite or a
         // movie shared from the world) builds none of it.
@@ -81,13 +82,30 @@ class GameController extends Controller
             'tmdbImageBaseUrl' => config('services.tmdb.base_image_url'),
             // Recorded toots a cast member plays instead (Guster's).
             'castSounds' => fn () => GamesWorld::castSounds(),
-            'soundboardSounds' => fn () => $soundsEnabled
-                ? Sound::notBlocked()->orderBy('title')->get(['id', 'title', 'emoji', 'audio_path'])
-                : [],
+            'soundboardSort' => $soundSort,
+            'soundboardSounds' => function () use ($soundsEnabled, $soundSort) {
+                if (! $soundsEnabled) {
+                    return [];
+                }
+
+                $sounds = Sound::notBlocked();
+                if ($soundSort === 'alphabetical') {
+                    $sounds->orderBy('title')->orderBy('id');
+                } else {
+                    $sounds->orderByDesc('created_at')->orderByDesc('id');
+                }
+
+                return $sounds->get(['id', 'title', 'emoji', 'audio_path']);
+            },
             // Who a minigame's score can be shared with (ShareToChatButton),
             // or invited into the world.
             'users' => fn () => self::users(),
         ]);
+    }
+
+    private static function soundSort(Request $request): string
+    {
+        return $request->query('sound_sort') === 'alphabetical' ? 'alphabetical' : 'newest';
     }
 
     /** Where a shared link opens the world, or null. */

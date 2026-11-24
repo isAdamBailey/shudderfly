@@ -122,6 +122,7 @@ return [
     'sound.shared' => '¡Vamos a escucharlo en el chat!',
     'soundboard.title' => 'Altar de sonido',
     'soundboard.close' => 'Cerrar la mesa de sonidos',
+    'soundboard.actions' => 'Acciones de :title',
     'soundboard.search' => 'Buscar un sonido',
     'soundboard.add' => 'Añadir grabación',
     'soundboard.name_label' => 'Nombre',
@@ -635,8 +636,9 @@ return [
     'search.not_found_movies' => 'No encuentro películas así',
 
     // Sounds
-    'sound.sort_alphabetical' => 'alfabético',
-    'sound.sort_date_added' => 'fecha agregada',
+    'sound.sort_alphabetical' => 'Alfabético',
+    'sound.sort_date_added' => 'Recién agregados',
+    'sound.sort_group' => 'Ordenar sonidos',
 
     // Upload filters (spoken)
     'uploads.filter_newest' => 'más recientes',

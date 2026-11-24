@@ -1,11 +1,14 @@
 <script setup>
+import ActionMenuItem from "@/Components/ActionMenuItem.vue";
+import { ACTION_MENU_PANEL_CLASSES } from "@/Components/actionMenuItem";
 import ConfirmDialog from "@/Components/ConfirmDialog.vue";
+import Dropdown from "@/Components/Dropdown.vue";
 import Modal from "@/Components/Modal.vue";
 import ShareToChatButton from "@/Components/ShareToChatButton.vue";
 import { useSiteSetting } from "@/composables/useSiteSetting";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { router, useForm } from "@inertiajs/vue3";
+import { router, useForm, usePage } from "@inertiajs/vue3";
 
 /* global route */
 
@@ -17,11 +20,17 @@ const props = defineProps({
 const emit = defineEmits(["cancel"]);
 
 const { t } = useTranslations();
+const page = usePage();
 const soundsEnabled = useSiteSetting("sounds_enabled");
+const messagingEnabled = useSiteSetting("messaging_enabled");
+const openMenuId = ref(null);
+const menuDropUp = ref({});
 const search = ref("");
 const playingId = ref(null);
 const error = ref("");
-const sounds = ref([...props.sounds]);
+const sounds = ref([...(page.props.soundboardSounds ?? props.sounds)]);
+const sort = ref(page.props.soundboardSort === "alphabetical" ? "alphabetical" : "newest");
+const sortLoading = ref(false);
 let audio = null;
 const pendingBlock = ref(null);
 const blockSubmitting = ref(false);
@@ -35,11 +44,59 @@ const titleId = "soundboard-title";
 const editTitleId = "soundboard-edit-title";
 
 watch(
-    () => props.sounds,
+    () => page.props.soundboardSounds,
     (nextSounds) => {
-        sounds.value = [...nextSounds];
+        if (Array.isArray(nextSounds)) sounds.value = [...nextSounds];
     }
 );
+
+watch(
+    () => page.props.soundboardSort,
+    (nextSort) => {
+        sort.value = nextSort === "alphabetical" ? "alphabetical" : "newest";
+    }
+);
+
+function hasActions(sound) {
+    return (
+        props.canManage ||
+        props.blockingEnabled ||
+        (messagingEnabled.value && Boolean(sound.audio_path))
+    );
+}
+
+function placeMenu(id, event) {
+    const shell = event.currentTarget.closest(".soundboard-shell");
+    if (!shell) return;
+    const button = event.currentTarget.getBoundingClientRect();
+    const bounds = shell.getBoundingClientRect();
+    const spaceBelow = bounds.bottom - button.bottom;
+    const spaceAbove = button.top - bounds.top;
+    menuDropUp.value = {
+        ...menuDropUp.value,
+        [id]: spaceBelow < 150 && spaceAbove > spaceBelow,
+    };
+}
+
+function onMenuOpen(id, open) {
+    openMenuId.value = open ? id : openMenuId.value === id ? null : openMenuId.value;
+}
+
+function setSort(nextSort) {
+    if (nextSort === sort.value || sortLoading.value) return;
+    sortLoading.value = true;
+    const params = Object.fromEntries(new URLSearchParams(window.location.search));
+    params.sound_sort = nextSort;
+    router.get(route("games.index"), params, {
+        replace: true,
+        preserveState: true,
+        preserveScroll: true,
+        only: ["soundboardSounds", "soundboardSort"],
+        onFinish: () => {
+            sortLoading.value = false;
+        },
+    });
+}
 
 const visibleSounds = computed(() => {
     const query = search.value.trim().toLocaleLowerCase();
@@ -228,6 +285,36 @@ onBeforeUnmount(stopAudio);
                         :aria-label="t('soundboard.search')"
                     />
                 </label>
+                <div
+                    class="soundboard-sort"
+                    role="group"
+                    :aria-label="t('sound.sort_group')"
+                >
+                    <button
+                        type="button"
+                        class="btn-bulge soundboard-sort-option"
+                        :class="{ 'is-active': sort === 'newest' }"
+                        :aria-pressed="sort === 'newest'"
+                        :aria-label="`${t('sound.sort_group')}: ${t('sound.sort_date_added')}`"
+                        :title="t('sound.sort_date_added')"
+                        :disabled="sortLoading"
+                        @click="setSort('newest')"
+                    >
+                        <i class="ri-time-line" aria-hidden="true"></i>
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-bulge soundboard-sort-option"
+                        :class="{ 'is-active': sort === 'alphabetical' }"
+                        :aria-pressed="sort === 'alphabetical'"
+                        :aria-label="`${t('sound.sort_group')}: ${t('sound.sort_alphabetical')}`"
+                        :title="t('sound.sort_alphabetical')"
+                        :disabled="sortLoading"
+                        @click="setSort('alphabetical')"
+                    >
+                        <i class="ri-sort-alphabet-asc" aria-hidden="true"></i>
+                    </button>
+                </div>
                 <button
                     v-if="canManage"
                     type="button"
@@ -287,7 +374,11 @@ onBeforeUnmount(stopAudio);
                     v-for="sound in visibleSounds"
                     :key="sound.id"
                     class="soundboard-tile"
-                    :class="{ 'is-playing': playingId === sound.id }"
+                    :class="{
+                        'is-playing': playingId === sound.id,
+                        'has-menu': hasActions(sound),
+                        'is-menu-open': openMenuId === sound.id,
+                    }"
                 >
                     <button
                         type="button"
@@ -307,45 +398,58 @@ onBeforeUnmount(stopAudio);
                             aria-hidden="true"
                         ></i>
                     </button>
-                    <div class="soundboard-actions">
-                        <ShareToChatButton
-                            v-if="sound.audio_path"
-                            kind="sound"
-                            :sound-id="sound.id"
-                            :preserve-world="true"
-                            :wrapper-class="'soundboard-share'"
-                        />
-                        <button
-                            v-if="blockingEnabled"
-                            type="button"
-                            class="btn-bulge soundboard-block"
-                            :aria-label="t('soundboard.block_aria', { title: sound.title })"
-                            :title="t('soundboard.block')"
-                            @click="askToBlock(sound)"
+                    <div v-if="hasActions(sound)" class="soundboard-menu">
+                        <Dropdown
+                            align="right"
+                            width="56"
+                            :drop-up="Boolean(menuDropUp[sound.id])"
+                            :content-classes="ACTION_MENU_PANEL_CLASSES"
+                            @open-change="(open) => onMenuOpen(sound.id, open)"
                         >
-                            <i class="ri-forbid-line" aria-hidden="true"></i>
-                            <span>{{ t("soundboard.block") }}</span>
-                        </button>
-                        <template v-if="canManage">
-                            <button
-                                type="button"
-                                class="btn-bulge soundboard-admin-action"
-                                :aria-label="t('soundboard.edit_aria', { title: sound.title })"
-                                :title="t('soundboard.edit')"
-                                @click="startEdit(sound)"
-                            >
-                                <i class="ri-pencil-line" aria-hidden="true"></i>
-                            </button>
-                            <button
-                                type="button"
-                                class="btn-bulge soundboard-admin-action is-danger"
-                                :aria-label="t('soundboard.delete_aria', { title: sound.title })"
-                                :title="t('soundboard.delete')"
-                                @click="pendingDelete = sound"
-                            >
-                                <i class="ri-delete-bin-line" aria-hidden="true"></i>
-                            </button>
-                        </template>
+                            <template #trigger>
+                                <button
+                                    type="button"
+                                    class="soundboard-kebab"
+                                    :aria-label="t('soundboard.actions', { title: sound.title })"
+                                    :title="t('soundboard.actions', { title: sound.title })"
+                                    @pointerdown="placeMenu(sound.id, $event)"
+                                >
+                                    <i class="ri-more-2-fill" aria-hidden="true"></i>
+                                </button>
+                            </template>
+                            <template #content>
+                                <ShareToChatButton
+                                    v-if="sound.audio_path"
+                                    kind="sound"
+                                    :sound-id="sound.id"
+                                    :preserve-world="true"
+                                    :menu-item="true"
+                                    wrapper-class="w-full"
+                                    @click.stop
+                                />
+                                <ActionMenuItem
+                                    v-if="blockingEnabled"
+                                    icon="ri-forbid-2-line"
+                                    icon-class="text-orange-500 dark:text-orange-400"
+                                    :label="t('soundboard.block')"
+                                    @click="askToBlock(sound)"
+                                />
+                                <ActionMenuItem
+                                    v-if="canManage"
+                                    icon="ri-edit-line"
+                                    icon-class="text-blue-600 dark:text-blue-400"
+                                    :label="t('soundboard.edit')"
+                                    @click="startEdit(sound)"
+                                />
+                                <ActionMenuItem
+                                    v-if="canManage"
+                                    icon="ri-delete-bin-line"
+                                    icon-class="text-red-600 dark:text-red-400"
+                                    :label="t('soundboard.delete')"
+                                    @click="pendingDelete = sound"
+                                />
+                            </template>
+                        </Dropdown>
                     </div>
                 </article>
             </div>
@@ -502,6 +606,42 @@ onBeforeUnmount(stopAudio);
     opacity: 1;
 }
 
+.soundboard-sort {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.4rem;
+}
+
+.soundboard-sort-option {
+    display: grid;
+    width: 2.9rem;
+    height: 2.9rem;
+    place-items: center;
+    border: 1px solid #64748b;
+    border-radius: 0.65rem;
+    background: transparent;
+    padding: 0;
+    color: #e5e7eb;
+    font-size: 1.35rem;
+    cursor: pointer;
+}
+
+.soundboard-sort-option.is-active {
+    border-color: #eab308;
+    background: #854d0e;
+    color: #fef3c7;
+}
+
+.soundboard-sort-option:focus-visible {
+    outline: 2px solid #fbbf24;
+    outline-offset: 2px;
+}
+
+.soundboard-sort-option:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
 .soundboard-add {
     display: inline-flex;
     min-height: 2.9rem;
@@ -645,6 +785,7 @@ onBeforeUnmount(stopAudio);
 }
 
 .soundboard-tile {
+    position: relative;
     min-width: 0;
     border: 1px solid #475569;
     border-radius: 0.85rem;
@@ -664,7 +805,7 @@ onBeforeUnmount(stopAudio);
     align-items: center;
     gap: 0.65rem;
     border: 0;
-    border-radius: 0.8rem 0.8rem 0 0;
+    border-radius: 0.8rem;
     background: transparent;
     padding: 0.75rem;
     color: #f9fafb;
@@ -676,11 +817,14 @@ onBeforeUnmount(stopAudio);
     background: #374151;
 }
 
+.soundboard-tile.has-menu .soundboard-play {
+    padding-right: 2.75rem;
+}
+
 .soundboard-play:focus-visible,
 .soundboard-close:focus-visible,
 .soundboard-add:focus-visible,
-.soundboard-block:focus-visible,
-.soundboard-admin-action:focus-visible,
+.soundboard-kebab:focus-visible,
 .soundboard-secondary:focus-visible,
 .soundboard-submit:focus-visible {
     outline: 2px solid #fbbf24;
@@ -715,53 +859,39 @@ onBeforeUnmount(stopAudio);
     font-size: 1.4rem;
 }
 
-.soundboard-actions {
-    display: flex;
-    min-height: 3.15rem;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    border-top: 1px solid #475569;
-    padding: 0.4rem 0.55rem;
+.soundboard-tile.is-menu-open {
+    z-index: 3;
 }
 
-.soundboard-share :deep(button) {
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    border-color: #64748b;
-    background: #273449;
-    color: #f9fafb;
+.soundboard-menu {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    z-index: 2;
 }
 
-.soundboard-block {
-    display: inline-flex;
-    min-height: 2.75rem;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    border: 1px solid #64748b;
-    border-radius: 0.5rem;
-    background: #273449;
-    padding: 0.45rem 0.65rem;
-    color: #fca5a5;
-    font-size: 0.8rem;
-    font-weight: 700;
-}
-
-.soundboard-admin-action {
+.soundboard-kebab {
     display: grid;
-    width: 2.75rem;
-    min-height: 2.75rem;
+    width: 2.25rem;
+    height: 2.25rem;
     place-items: center;
-    border: 1px solid #64748b;
+    border: 0;
     border-radius: 0.5rem;
-    background: #273449;
+    background: transparent;
     color: #e5e7eb;
-    font-size: 1rem;
+    font-size: 1.25rem;
+    cursor: pointer;
 }
 
-.soundboard-admin-action.is-danger {
-    color: #fca5a5;
+.soundboard-kebab:hover {
+    background: #374151;
+    color: #fcd34d;
+}
+
+.soundboard-menu :deep([role="menuitem"]) {
+    min-height: 2.5rem;
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
 }
 
 .soundboard-empty {
@@ -802,15 +932,6 @@ onBeforeUnmount(stopAudio);
 
     .soundboard-grid {
         gap: 0.55rem;
-    }
-
-    .soundboard-actions {
-        gap: 0.3rem;
-        padding: 0.35rem;
-    }
-
-    .soundboard-block span {
-        display: none;
     }
 }
 </style>

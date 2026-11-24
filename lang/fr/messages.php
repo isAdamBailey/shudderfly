@@ -58,6 +58,7 @@ return [
     'sound.shared' => 'On va l\'écouter sur le chat !',
     'soundboard.title' => 'Autel sonore',
     'soundboard.close' => 'Fermer le tableau sonore',
+    'soundboard.actions' => 'Actions pour :title',
     'soundboard.search' => 'Chercher un son',
     'soundboard.add' => 'Ajouter un enregistrement',
     'soundboard.name_label' => 'Nom',
@@ -573,8 +574,9 @@ return [
     'search.not_found_movies' => 'Je ne trouve aucun film comme ça',
 
     // Sounds
-    'sound.sort_alphabetical' => 'alphabétique',
-    'sound.sort_date_added' => 'date d\'ajout',
+    'sound.sort_alphabetical' => 'Alphabétique',
+    'sound.sort_date_added' => 'Récemment ajoutés',
+    'sound.sort_group' => 'Trier les sons',
 
     // Upload filters (spoken)
     'uploads.filter_newest' => 'les plus récents',

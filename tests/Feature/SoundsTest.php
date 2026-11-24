@@ -58,22 +58,65 @@ class SoundsTest extends TestCase
         $response->assertRedirect(route('games.index', ['scene' => 'guster-house.exhibit']));
     }
 
-    public function test_soundboard_sounds_are_ordered_alphabetically(): void
+    public function test_soundboard_sounds_default_to_newly_added(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Sound::factory()->create(['title' => 'Zebra Sound']);
-        Sound::factory()->create(['title' => 'Apple Sound']);
-        Sound::factory()->create(['title' => 'Mango Sound']);
+        Sound::factory()->create([
+            'title' => 'Middle',
+            'created_at' => now()->subDay(),
+        ]);
+        Sound::factory()->create([
+            'title' => 'Oldest',
+            'created_at' => now()->subDays(3),
+        ]);
+        Sound::factory()->create([
+            'title' => 'Newest',
+            'created_at' => now(),
+        ]);
 
-        $response = $this->get(route('games.index'));
-        $response->assertInertia(
+        $this->get(route('games.index'))->assertInertia(
             fn ($page) => $page
                 ->component('Games/Index')
-                ->where('soundboardSounds.0.title', 'Apple Sound')
-                ->where('soundboardSounds.1.title', 'Mango Sound')
-                ->where('soundboardSounds.2.title', 'Zebra Sound')
+                ->where('soundboardSort', 'newest')
+                ->where('soundboardSounds.0.title', 'Newest')
+                ->where('soundboardSounds.1.title', 'Middle')
+                ->where('soundboardSounds.2.title', 'Oldest')
+        );
+
+        $this->get(route('games.index', ['sound_sort' => 'nope']))->assertInertia(
+            fn ($page) => $page
+                ->where('soundboardSort', 'newest')
+                ->where('soundboardSounds.0.title', 'Newest')
+        );
+    }
+
+    public function test_soundboard_sounds_can_be_ordered_alphabetically(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Sound::factory()->create([
+            'title' => 'Middle',
+            'created_at' => now()->subDay(),
+        ]);
+        Sound::factory()->create([
+            'title' => 'Oldest',
+            'created_at' => now()->subDays(3),
+        ]);
+        Sound::factory()->create([
+            'title' => 'Newest',
+            'created_at' => now(),
+        ]);
+
+        $this->get(route('games.index', ['sound_sort' => 'alphabetical']))->assertInertia(
+            fn ($page) => $page
+                ->component('Games/Index')
+                ->where('soundboardSort', 'alphabetical')
+                ->where('soundboardSounds.0.title', 'Middle')
+                ->where('soundboardSounds.1.title', 'Newest')
+                ->where('soundboardSounds.2.title', 'Oldest')
         );
     }
 
