@@ -1,7 +1,7 @@
 <script setup>
 import { useResizeObserver } from "@vueuse/core";
 import { ref, computed, onMounted, onUnmounted, shallowRef, watch } from "vue";
-import { GUSTER_CSS_VARS, PIZZA } from "@/constants/characters.js";
+import { GUSTER_CSS_VARS } from "@/constants/characters.js";
 import {
     FLOW_MARKS,
     PATH_D,
@@ -12,7 +12,7 @@ import {
     WORLD_WIDTH,
 } from "../composables/intestinePath.js";
 import GusterGlyph from "@/Components/Games/Cast/GusterGlyph.vue";
-import PepperoniGlyph from "./PepperoniGlyph.vue";
+import FoodGlyph from "./FoodGlyph.vue";
 import { useTranslations } from "@/composables/useTranslations";
 
 const { t } = useTranslations();
@@ -25,6 +25,8 @@ const props = defineProps({
     controlsEnabled: { type: Boolean, default: true },
     poopVisible: { type: Boolean, default: true },
     showDigestIntro: { type: Boolean, default: false },
+    /** The food the face ate (an id from foods.js). */
+    food: { type: String, default: "pizza" },
 });
 
 const emit = defineEmits(["move"]);
@@ -143,17 +145,31 @@ function behind(points, back) {
     return points.at(-1);
 }
 
-// Farthest first, so nearer ones are drawn over them.
+// Farthest first, so nearer ones are drawn over them. Each carries a bit
+// of what the face ate, held up at his side.
 const followers = computed(() => {
     const points = [
         { x: props.state.poopX, y: props.state.poopY },
         ...trail.value,
     ];
-    return FOLLOWERS.map(({ back, scale }) => ({
-        ...behind(points, back),
-        size: spriteSize.value * scale,
-    })).reverse();
+    return FOLLOWERS.map(({ back, scale }) => {
+        const at = behind(points, back);
+        const size = spriteSize.value * scale;
+        return {
+            ...at,
+            size,
+            food: {
+                x: at.x + size * 0.55,
+                y: at.y - size * 0.3,
+                size: size * 0.6,
+            },
+        };
+    }).reverse();
 });
+
+// The three bites of food the stomach churns into him.
+const DIGEST_BITES = ["a", "b", "c"];
+const DIGEST_FOOD_SIZE = 40;
 
 const showSteerHint = ref(false);
 let steerHintTimer = null;
@@ -413,6 +429,12 @@ onUnmounted(() => {
                     :style="{ animationDelay: `${-i * 0.18}s` }"
                 >
                     <GusterGlyph :x="f.x" :y="f.y" :size="f.size" />
+                    <FoodGlyph
+                        :food="food"
+                        :x="f.food.x"
+                        :y="f.food.y"
+                        :size="f.food.size"
+                    />
                 </g>
             </g>
 
@@ -443,50 +465,17 @@ onUnmounted(() => {
                     :ry="digestIntro.stomachRy * 0.62"
                     class="digest-stomach-inner"
                 />
-                <text
-                    :x="digestIntro.stomachCx"
-                    :y="digestIntro.stomachCy"
-                    text-anchor="middle"
-                    dominant-baseline="central"
-                    class="digest-slice digest-slice-a"
-                >
-                    {{ PIZZA }}
-                </text>
-                <text
-                    :x="digestIntro.stomachCx"
-                    :y="digestIntro.stomachCy"
-                    text-anchor="middle"
-                    dominant-baseline="central"
-                    class="digest-slice digest-slice-b"
-                >
-                    {{ PIZZA }}
-                </text>
-                <text
-                    :x="digestIntro.stomachCx"
-                    :y="digestIntro.stomachCy"
-                    text-anchor="middle"
-                    dominant-baseline="central"
-                    class="digest-slice digest-slice-c"
-                >
-                    {{ PIZZA }}
-                </text>
                 <g
-                    :transform="`translate(${digestIntro.stomachCx}, ${digestIntro.stomachCy})`"
+                    v-for="bite in DIGEST_BITES"
+                    :key="bite"
+                    :class="['digest-slice', `digest-slice-${bite}`]"
                 >
-                    <g class="digest-pepp digest-pepp-a">
-                        <g transform="translate(-24, -24) scale(0.5)">
-                            <PepperoniGlyph />
-                        </g>
-                    </g>
-                </g>
-                <g
-                    :transform="`translate(${digestIntro.stomachCx}, ${digestIntro.stomachCy})`"
-                >
-                    <g class="digest-pepp digest-pepp-b">
-                        <g transform="translate(-24, -24) scale(0.5)">
-                            <PepperoniGlyph />
-                        </g>
-                    </g>
+                    <FoodGlyph
+                        :food="food"
+                        :x="digestIntro.stomachCx"
+                        :y="digestIntro.stomachCy"
+                        :size="DIGEST_FOOD_SIZE"
+                    />
                 </g>
                 <g
                     class="digest-intro-poop"
@@ -691,19 +680,6 @@ onUnmounted(() => {
     animation: digestSliceC 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
 }
 
-.digest-pepp {
-    transform-box: fill-box;
-    transform-origin: center;
-}
-
-.digest-pepp-a {
-    animation: digestPeppA 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
-}
-
-.digest-pepp-b {
-    animation: digestPeppB 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
-}
-
 .digest-intro-poop {
     opacity: 0;
     filter: drop-shadow(0 0 0 rgba(78, 37, 23, 0));
@@ -886,45 +862,6 @@ onUnmounted(() => {
     }
 }
 
-/* Pepperoni sticks join the slices, spiraling inward from the opposite side. */
-@keyframes digestPeppA {
-    0% {
-        opacity: 1;
-        transform: translate(-40px, 18px) rotate(24deg) scale(1);
-    }
-    55% {
-        opacity: 1;
-        transform: translate(-8px, 4px) rotate(-160deg) scale(0.72);
-    }
-    82% {
-        opacity: 0.85;
-        transform: translate(0, 13px) rotate(-290deg) scale(0.36, 0.26);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(0, 16px) rotate(-360deg) scale(0.06);
-    }
-}
-
-@keyframes digestPeppB {
-    0% {
-        opacity: 1;
-        transform: translate(38px, 22px) rotate(-18deg) scale(1);
-    }
-    55% {
-        opacity: 1;
-        transform: translate(7px, 5px) rotate(190deg) scale(0.7);
-    }
-    82% {
-        opacity: 0.85;
-        transform: translate(0, 13px) rotate(310deg) scale(0.36, 0.26);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(0, 16px) rotate(380deg) scale(0.06);
-    }
-}
-
 /* Poop forms in the belly with a squash-pop, then oozes down to its start. */
 @keyframes digestPoopForm {
     0% {
@@ -976,9 +913,7 @@ onUnmounted(() => {
 
     .digest-slice-a,
     .digest-slice-b,
-    .digest-slice-c,
-    .digest-pepp-a,
-    .digest-pepp-b {
+    .digest-slice-c {
         animation: digestSliceFade 0.7s ease forwards;
     }
 

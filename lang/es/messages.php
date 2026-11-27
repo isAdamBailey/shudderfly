@@ -1016,12 +1016,16 @@ return [
 
     // Games - Costco Food Poop
     'games.costco_pizza_poop.name' => 'Popó de Comida de Costco',
-    'games.costco_pizza_poop.description' => 'Alimenta cada rebanada y palito, y luego guíalo por el intestino hasta el gran final.',
+    'games.costco_pizza_poop.description' => 'Elige una comida, dale tres a la cara y luego guíala por el intestino hasta el gran final.',
     'games.costco_pizza_poop.hud_food_left' => 'Comida restante',
     'games.costco_pizza_poop.pizza_hint' => 'Arrastra la comida hasta la boca 👇',
+    'games.costco_pizza_poop.pick_hint' => 'Elige una comida 👇',
     'games.costco_pizza_poop.pizza_slice' => 'Rebanada de pizza',
     'games.costco_pizza_poop.pepperoni_stick' => 'Palito de pepperoni',
+    'games.costco_pizza_poop.hot_dog' => 'Hot dog',
     'games.costco_pizza_poop.slice_aria' => ':item — arrástralo hasta la boca, o presiona Enter para comerlo',
+    'games.costco_pizza_poop.pick_aria' => ':item — elige esta comida',
+    'games.costco_pizza_poop.change_food' => 'Cambiar comida',
     'games.costco_pizza_poop.board_wall_hits_label' => 'Choques',
     'games.costco_pizza_poop.board_progress_label' => 'Progreso',
     'games.costco_pizza_poop.board_time_label' => 'Tiempo',

@@ -13,11 +13,31 @@
             <span class="hud-value">{{ slicesLeft }}</span>
         </div>
 
-        <transition name="pizza-hint-fade">
-            <div v-if="showPizzaHint" class="pizza-hint" aria-hidden="true">
-                {{ t("games.costco_pizza_poop.pizza_hint") }}
+        <transition name="pizza-hint-fade" mode="out-in">
+            <div
+                v-if="showPizzaHint"
+                :key="chosenFood ? 'feed' : 'pick'"
+                class="pizza-hint"
+                aria-hidden="true"
+            >
+                {{
+                    t(
+                        chosenFood
+                            ? "games.costco_pizza_poop.pizza_hint"
+                            : "games.costco_pizza_poop.pick_hint"
+                    )
+                }}
             </div>
         </transition>
+
+        <button
+            v-if="chosenFood && slicesLeft === FEED_COUNT"
+            type="button"
+            class="change-food"
+            @click="unchooseFood"
+        >
+            {{ t("games.costco_pizza_poop.change_food") }}
+        </button>
 
         <button
             v-for="s in sliceList"
@@ -28,20 +48,18 @@
             :class="{ dragging: draggingId === s.id }"
             :style="sliceStyle(s)"
             :aria-label="
-                t('games.costco_pizza_poop.slice_aria', {
-                    item: t(
-                        s.kind === 'pepperoni'
-                            ? 'games.costco_pizza_poop.pepperoni_stick'
-                            : 'games.costco_pizza_poop.pizza_slice'
-                    ),
-                })
+                t(
+                    chosenFood
+                        ? 'games.costco_pizza_poop.slice_aria'
+                        : 'games.costco_pizza_poop.pick_aria',
+                    { item: t(findFood(s.kind).label) }
+                )
             "
             @pointerdown.prevent="startDrag(s.id, $event)"
-            @keydown.enter.prevent="feedSlice(s.id)"
-            @keydown.space.prevent="feedSlice(s.id)"
+            @keydown.enter.prevent="tapSlice(s.id)"
+            @keydown.space.prevent="tapSlice(s.id)"
         >
-            <PepperoniStick v-if="s.kind === 'pepperoni'" class="food-svg" />
-            <template v-else>{{ PIZZA }}</template>
+            <FoodIcon :food="s.kind" />
         </button>
 
         <div class="person-wrap">
@@ -71,6 +89,7 @@
             :controls-enabled="!intestineIntroActive"
             :poop-visible="!intestineIntroActive"
             :show-digest-intro="intestineIntroActive"
+            :food="chosenFood"
             @move="movePoop"
         />
     </div>
@@ -80,8 +99,13 @@
 import { useResizeObserver } from "@vueuse/core";
 import PersonFace from "@/Components/Games/PersonFace.vue";
 import GameBoard from "@/Pages/Games/CostcoPizzaPoop/components/GameBoard.vue";
-import PepperoniStick from "@/Pages/Games/CostcoPizzaPoop/components/PepperoniStick.vue";
-import { GUSTER_CSS_VARS, PIZZA } from "@/constants/characters.js";
+import FoodIcon from "@/Pages/Games/CostcoPizzaPoop/components/FoodIcon.vue";
+import { GUSTER_CSS_VARS } from "@/constants/characters.js";
+import {
+    FEED_COUNT,
+    FOODS,
+    findFood,
+} from "@/Pages/Games/CostcoPizzaPoop/composables/foods.js";
 import { useGameState } from "@/Pages/Games/CostcoPizzaPoop/composables/useGameState.js";
 import { useTranslations } from "@/composables/useTranslations";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -94,8 +118,6 @@ const props = defineProps({
 
 const { t } = useTranslations();
 
-const PIZZA_COUNT = 3;
-const PEPPERONI_COUNT = 2;
 const SLICE_MAX = 96;
 const INTESTINE_INTRO_MS = 2600;
 
@@ -106,7 +128,7 @@ const intestineEl = ref(null);
 const faceRef = ref(null);
 const mouthEl = computed(() => faceRef.value?.mouthEl ?? null);
 const faceEl = computed(() => faceRef.value?.faceEl ?? null);
-// Shrinks so the five foods fit across a narrow window without overlapping.
+// Shrinks so the foods fit across a narrow window without overlapping.
 const sliceSize = ref(SLICE_MAX);
 const gameW = ref(400);
 const gameH = ref(600);
@@ -117,26 +139,26 @@ const anticipating = ref(false);
 const gulping = ref(false);
 const chompCount = ref(0);
 let gulpTimer = null;
-function createFoodList() {
-    const pizza = Array.from({ length: PIZZA_COUNT }, (_, i) => ({
-        kind: "pizza",
-        id: i,
-    }));
-    const pepperoni = Array.from({ length: PEPPERONI_COUNT }, (_, i) => ({
-        kind: "pepperoni",
-        id: PIZZA_COUNT + i,
-    }));
-    return [...pizza, ...pepperoni].map((f) => ({
-        ...f,
-        eaten: false,
-        x: 0,
-        y: 0,
-        startX: 0,
-        startY: 0,
-    }));
+// A drag shorter than this is a tap.
+const TAP_SLOP = 8;
+
+// Until a food is chosen there is one of each to pick from; then there are
+// FEED_COUNT of the chosen one to feed.
+const chosenFood = ref(null);
+
+function foodItem(kind, id) {
+    return { kind, id, eaten: false, x: 0, y: 0, startX: 0, startY: 0 };
 }
 
-const sliceList = ref(createFoodList());
+function pickList() {
+    return FOODS.map((food) => foodItem(food.id, `pick-${food.id}`));
+}
+
+function feedList(kind) {
+    return Array.from({ length: FEED_COUNT }, (_, i) => foodItem(kind, i));
+}
+
+const sliceList = ref(pickList());
 const draggingId = ref(null);
 const showPizzaHint = ref(true);
 let dragOffsetX = 0;
@@ -156,8 +178,10 @@ const {
     POOP_RADIUS,
 } = useGameState();
 
-const slicesLeft = computed(
-    () => sliceList.value.filter((s) => !s.eaten).length
+const slicesLeft = computed(() =>
+    chosenFood.value
+        ? sliceList.value.filter((s) => !s.eaten).length
+        : FEED_COUNT
 );
 
 watch(
@@ -190,7 +214,6 @@ function sliceStyle(s) {
         top: `${s.y - sliceSize.value / 2}px`,
         width: `${sliceSize.value}px`,
         height: `${sliceSize.value}px`,
-        fontSize: `${Math.floor(sliceSize.value * 0.85)}px`,
     };
 }
 
@@ -303,6 +326,33 @@ function removeDragListeners() {
     }
 }
 
+function chooseFood(kind) {
+    chosenFood.value = kind;
+    sliceList.value = feedList(kind);
+    layoutSlices();
+}
+
+// Back to one of each. Only offered before the first bite.
+function unchooseFood() {
+    chosenFood.value = null;
+    sliceList.value = pickList();
+    layoutSlices();
+    gameEl.value?.focus();
+}
+
+// A tap (or Enter) on a food picks it, while there is a choice to make.
+function tapSlice(id) {
+    if (chosenFood.value) {
+        feedSlice(id);
+        return;
+    }
+    const s = sliceList.value.find((x) => x.id === id);
+    if (!s) return;
+    chooseFood(s.kind);
+    // The picked button is gone; its first stand-in takes the focus.
+    nextTick(() => gameEl.value?.querySelector("button.slice")?.focus());
+}
+
 function feedSlice(id) {
     if (phase.value !== "pizza") return;
     const s = sliceList.value.find((x) => x.id === id);
@@ -329,6 +379,8 @@ function startDrag(id, e) {
     e.target.setPointerCapture?.(e.pointerId);
 
     const pos = getLocalPos(e);
+    const downX = pos.x;
+    const downY = pos.y;
     draggingId.value = id;
     dragOffsetX = pos.x - s.x;
     dragOffsetY = pos.y - s.y;
@@ -352,8 +404,20 @@ function startDrag(id, e) {
         removeDragListeners();
         draggingId.value = null;
 
+        const tapped =
+            Math.hypot(s.x + dragOffsetX - downX, s.y + dragOffsetY - downY) <
+            TAP_SLOP;
+
         if (pointInMouth(s.x, s.y)) {
-            feedSlice(id);
+            if (!chosenFood.value) {
+                // Dragged straight in: picked, and that was the first bite.
+                chooseFood(s.kind);
+                feedSlice(sliceList.value[0].id);
+            } else {
+                feedSlice(id);
+            }
+        } else if (tapped && !chosenFood.value) {
+            tapSlice(id);
         } else {
             s.x = s.startX;
             s.y = s.startY;
@@ -460,9 +524,25 @@ onUnmounted(() => {
     transition: transform 0.12s ease;
 }
 
-.food-svg {
-    width: 100%;
-    height: 100%;
+/* In the corner of the HUD bar, clear of the food row. */
+.change-food {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    z-index: 25;
+    padding: 4px 12px;
+    border: 2px solid var(--guster-body);
+    border-radius: 999px;
+    background: rgb(var(--guster-base-rgb) / 0.88);
+    color: var(--guster-eye-white);
+    font-size: clamp(0.85rem, 2.6vmin, 1rem);
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.change-food:focus-visible {
+    outline: 3px solid #fbbf24;
+    outline-offset: 3px;
 }
 
 .slice:focus-visible {
