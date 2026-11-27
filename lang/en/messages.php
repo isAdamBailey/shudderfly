@@ -1014,15 +1014,19 @@ return [
     'games.cockroach_fight.hud_taps_label' => 'Taps:',
     'games.cockroach_fight.fight_label' => 'FIGHT!',
 
-    // Games - Costco Food Poop
-    'games.costco_pizza_poop.name' => 'Costco Food Poop',
-    'games.costco_pizza_poop.description' => 'Feed every slice and stick, then guide it through the intestine to the grand finale.',
+    // Games - Food Poop
+    'games.costco_pizza_poop.name' => 'Food Poop',
+    'games.costco_pizza_poop.description' => 'Pick a food, feed three to the face, then guide it through the intestine to the grand finale.',
     'games.costco_pizza_poop.hud_food_left' => 'Food left',
     'games.costco_pizza_poop.pizza_hint' => 'Drag food into the mouth 👇',
+    'games.costco_pizza_poop.pick_hint' => 'Pick a food 👇',
     'games.costco_pizza_poop.pizza_slice' => 'Pizza slice',
     'games.costco_pizza_poop.pepperoni_stick' => 'Pepperoni stick',
+    'games.costco_pizza_poop.hot_dog' => 'Hot dog',
+    'games.costco_pizza_poop.soda_pop' => 'Soda pop',
     'games.costco_pizza_poop.slice_aria' => ':item — drag into the mouth, or press Enter to eat',
-    'games.costco_pizza_poop.board_wall_hits_label' => 'Wall hits',
+    'games.costco_pizza_poop.pick_aria' => ':item — pick this food',
+    'games.costco_pizza_poop.change_food' => 'Change food',
     'games.costco_pizza_poop.board_progress_label' => 'Progress',
     'games.costco_pizza_poop.board_time_label' => 'Time',
     'games.costco_pizza_poop.board_time_value' => ':seconds s',

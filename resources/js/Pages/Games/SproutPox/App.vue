@@ -58,7 +58,7 @@ function measure() {
 useResizeObserver(stageEl, measure);
 
 // --- Gaze tracking: eyes follow the pull-back and the flying sprout,
-// matching the "hungry person" behavior in Costco Food Poop. ---------------
+// matching the "hungry person" behavior in Food Poop. ---------------
 const gazeX = ref(0);
 const gazeY = ref(0);
 const anticipating = ref(false);

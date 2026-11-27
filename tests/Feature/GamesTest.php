@@ -324,7 +324,7 @@ class GamesTest extends TestCase
             'cockroach' => ['Cockroach Fart', 'cockroach-house.hall', "the Cockroach's Nest"],
             'cockroach-fight' => ['Cockroach Fight', 'cockroach-house.hall', "the Cockroach's Nest"],
             'toot-foods' => ['Toot Foods', 'house.kitchen', "the Kitchen at the Butt's House"],
-            'costco-pizza-poop' => ['Costco Food Poop', 'house.kitchen', "the Kitchen at the Butt's House"],
+            'costco-pizza-poop' => ['Food Poop', 'house.kitchen', "the Kitchen at the Butt's House"],
             'boom' => ['Poop Boom', 'house.bathroom', "the Bathroom at the Butt's House"],
             'sprout-pox' => ['Brussels Sprout Chicken Pox', 'house.kitchen', "the Kitchen at the Butt's House"],
         ] as $slug => [$name, $scene, $where]) {

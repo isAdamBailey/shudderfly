@@ -2,19 +2,24 @@ import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick, reactive, ref } from "vue";
 import App from "./App.vue";
+import FoodIcon from "./components/FoodIcon.vue";
+import { FEED_COUNT, FOODS } from "./composables/foods.js";
 
 // The intestine run, held still so a test can finish it.
 const intestine = vi.hoisted(() => ({ state: null }));
 
 vi.mock("./composables/useGameState.js", () => ({
     useGameState: () => {
-        intestine.state = reactive({ phase: "start", score: 0, collisions: 0 });
+        intestine.state = reactive({ phase: "start", score: 0 });
         return {
             state: intestine.state,
             elapsedSeconds: ref(0),
             progress: ref(0),
             startGame: () => {
                 intestine.state.phase = "playing";
+            },
+            startClock: () => {
+                intestine.state.clockStarted = true;
             },
             movePoop: vi.fn(),
             POOP_RADIUS: 10,
@@ -35,21 +40,101 @@ async function play() {
     await vi.advanceTimersByTimeAsync(0);
 }
 
-async function feedEverything() {
+const kinds = () =>
+    wrapper
+        .findAll("button.slice")
+        .map((b) => b.findComponent(FoodIcon).props("food"));
+
+async function pick(food = "pizza") {
+    const button = wrapper
+        .findAll("button.slice")
+        .find((b) => b.findComponent(FoodIcon).props("food") === food);
+    await button.trigger("keydown", { key: "Enter" });
+}
+
+async function feedEverything(food = "pizza") {
+    await pick(food);
     for (const slice of wrapper.findAll("button.slice")) {
         await slice.trigger("keydown", { key: "Enter" });
     }
 }
 
-describe("Costco Food Poop", () => {
+describe("Food Poop", () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => {
         wrapper?.unmount();
         vi.useRealTimers();
     });
 
+    it("offers one of each food to pick from", async () => {
+        await play();
+
+        expect(kinds()).toEqual(FOODS.map((f) => f.id));
+        expect(wrapper.find(".change-food").exists()).toBe(false);
+    });
+
+    it("turns the row into three of the food picked", async () => {
+        await play();
+
+        await pick("hot_dog");
+
+        expect(kinds()).toEqual(Array(FEED_COUNT).fill("hot_dog"));
+        expect(kit.playSound).not.toHaveBeenCalled();
+    });
+
+    it("lets the pick be changed until the first bite", async () => {
+        await play();
+        await pick("pepperoni");
+
+        await wrapper.get(".change-food").trigger("click");
+        expect(kinds()).toEqual(FOODS.map((f) => f.id));
+
+        await pick("pepperoni");
+        await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
+        expect(wrapper.find(".change-food").exists()).toBe(false);
+    });
+
+    it("throws the soda up instead of eating it", async () => {
+        await play();
+        await pick("soda");
+        const face = () => wrapper.findComponent({ name: "PersonFace" });
+
+        await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
+
+        expect(face().props("vomiting")).toBe(true);
+        expect(kit.playSound).not.toHaveBeenCalled();
+        expect(wrapper.get(".hud-value").text()).toBe(String(FEED_COUNT));
+        expect(wrapper.find(".change-food").exists()).toBe(true);
+        expect(wrapper.find(".intestine-wrap").exists()).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1200);
+        expect(face().props("vomiting")).toBe(false);
+    });
+
+    it("stops throwing up when the food is changed", async () => {
+        await play();
+        await pick("soda");
+        await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
+
+        await wrapper.get(".change-food").trigger("click");
+
+        expect(
+            wrapper.findComponent({ name: "PersonFace" }).props("vomiting")
+        ).toBe(false);
+    });
+
+    it("hands the food eaten to the intestine", async () => {
+        await play();
+        await feedEverything("pepperoni");
+
+        expect(wrapper.findComponent({ name: "GameBoard" }).props("food")).toBe(
+            "pepperoni"
+        );
+    });
+
     it("starts at once and chomps through the world", async () => {
         await play();
+        await pick();
 
         await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
 
@@ -58,6 +143,7 @@ describe("Costco Food Poop", () => {
 
     it("keeps keyboard focus in the game as the food goes", async () => {
         await play();
+        await pick();
 
         await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
         expect(document.activeElement).toBe(
@@ -71,15 +157,13 @@ describe("Costco Food Poop", () => {
         );
     });
 
-    it("bonks through the world when the poop hits a wall", async () => {
+    it("starts the clock once the stomach intro is over", async () => {
         await play();
         await feedEverything();
-        await vi.advanceTimersByTimeAsync(5000);
+        expect(intestine.state.clockStarted).toBeUndefined();
 
-        intestine.state.collisions = 1;
-        await nextTick();
-
-        expect(kit.playSound).toHaveBeenCalledWith("bonk");
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(intestine.state.clockStarted).toBe(true);
     });
 
     it("toots the poop out and hands the score to the world", async () => {

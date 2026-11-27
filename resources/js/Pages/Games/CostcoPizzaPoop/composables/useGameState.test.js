@@ -1,9 +1,9 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PATH_POINTS } from "./intestinePath.js";
 import { useGameState } from "./useGameState.js";
 
-function play() {
+function play({ clock = true } = {}) {
     let game;
     mount({
         setup() {
@@ -12,6 +12,7 @@ function play() {
         },
     });
     game.startGame();
+    if (clock) game.startClock();
     return game;
 }
 
@@ -24,6 +25,8 @@ function followTube(game) {
 }
 
 describe("the intestine run", () => {
+    afterEach(() => vi.useRealTimers());
+
     it("starts at the top of the tube", () => {
         const { state, progress } = play();
 
@@ -32,7 +35,7 @@ describe("the intestine run", () => {
         expect(progress.value).toBe(0);
     });
 
-    it("holds the poop against a wall and counts the bump", () => {
+    it("holds the poop against a wall", () => {
         const { state, movePoop, POOP_RADIUS } = play();
 
         movePoop(80, 0);
@@ -41,23 +44,6 @@ describe("the intestine run", () => {
         expect(
             Math.hypot(state.poopX - centre.x, state.poopY - centre.y)
         ).toBeCloseTo(centre.hw - POOP_RADIUS);
-        expect(state.collisions).toBe(1);
-    });
-
-    it("counts pressing along a wall as one bump", () => {
-        vi.useFakeTimers();
-        const { state, movePoop } = play();
-
-        for (let i = 0; i < 10; i++) {
-            movePoop(20, 0);
-            vi.advanceTimersByTime(500);
-        }
-        expect(state.collisions).toBe(1);
-
-        movePoop(-30, 0);
-        movePoop(60, 0);
-        expect(state.collisions).toBe(2);
-        vi.useRealTimers();
     });
 
     it("cannot be pushed through a wall into the next coil", () => {
@@ -74,14 +60,39 @@ describe("the intestine run", () => {
         expect(Math.abs(game.state.pathIndex - before)).toBeLessThan(20);
     });
 
-    it("comes out the end with full marks when it never touches a wall", () => {
+    it("comes out the end with full marks when it takes no time, walls or not", () => {
+        vi.useFakeTimers();
         const game = play();
 
+        for (let i = 0; i < 5; i++) game.movePoop(80, 0);
         followTube(game);
 
         expect(game.state.phase).toBe("win");
-        expect(game.state.collisions).toBe(0);
         expect(game.state.score).toBe(1000);
         expect(game.progress.value).toBeGreaterThan(0.99);
+    });
+
+    it("scores less the longer it takes, down to a floor", () => {
+        vi.useFakeTimers();
+        const quick = play();
+        vi.advanceTimersByTime(30000);
+        followTube(quick);
+        expect(quick.state.score).toBe(700);
+
+        const slow = play();
+        vi.advanceTimersByTime(600000);
+        followTube(slow);
+        expect(slow.state.score).toBe(100);
+    });
+
+    it("keeps the clock still until it is started", () => {
+        vi.useFakeTimers();
+        const game = play({ clock: false });
+        vi.advanceTimersByTime(5000);
+        expect(game.elapsedSeconds.value).toBe(0);
+
+        game.startClock();
+        vi.advanceTimersByTime(3000);
+        expect(game.elapsedSeconds.value).toBe(3);
     });
 });
