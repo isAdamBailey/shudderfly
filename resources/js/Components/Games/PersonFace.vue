@@ -14,13 +14,17 @@ const props = defineProps({
     gulping: { type: Boolean, default: false },
     /** Bump on every chomp so the burst animation restarts. */
     chompCount: { type: Number, default: 0 },
+    /** Throwing up: green face, mouth wide, a spew falling out of it. */
+    vomiting: { type: Boolean, default: false },
+    /** Bump on every throw-up so the spew animation restarts. */
+    vomitCount: { type: Number, default: 0 },
     /**
      * Chicken pox spots. x/y/size are percentages of the face box, so they
      * ride along with the head bob and stay put once placed.
      */
     poxDots: { type: Array, default: () => [] },
     /**
-     * null  -> mouth idles with the chewing animation (Costco Food Poop).
+     * null  -> mouth idles with the chewing animation (Food Poop).
      * true  -> held open. false -> held shut (Brussels Sprout Chicken Pox).
      */
     mouthOpen: { type: Boolean, default: null },
@@ -46,6 +50,9 @@ defineExpose({ faceEl, mouthEl });
         :class="{
             anticipating,
             gulping,
+            vomiting,
+            // A new name restarts the heave, as the spew's key does.
+            'vomit-again': vomitCount % 2 === 0,
             'mouth-controlled': mouthControlled,
             'mouth-open': mouthControlled && mouthOpen,
         }"
@@ -60,6 +67,8 @@ defineExpose({ faceEl, mouthEl });
                 '--mouth-scale': mouthScale,
             }"
         >
+            <!-- First, so the green is on the skin, under the features. -->
+            <span class="person-queasy" aria-hidden="true"></span>
             <span
                 class="person-brow person-brow-left"
                 aria-hidden="true"
@@ -107,6 +116,15 @@ defineExpose({ faceEl, mouthEl });
             >
                 <span></span><span></span><span></span><span></span
                 ><span></span>
+            </div>
+            <div
+                v-if="vomiting"
+                :key="`vomit-${vomitCount}`"
+                class="vomit-spew"
+                aria-hidden="true"
+            >
+                <span></span><span></span><span></span><span></span><span></span
+                ><span></span><span></span>
             </div>
         </div>
     </div>
@@ -356,6 +374,149 @@ defineExpose({ faceEl, mouthEl });
     pointer-events: none;
 }
 
+/* Throwing up: the face goes green, the brows knit,
+ * the eyes squeeze, the head heaves forward and the mouth gapes. */
+.person-queasy {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+        circle at 50% 62%,
+        rgba(120, 190, 70, 0.75) 0%,
+        rgba(140, 200, 90, 0.45) 60%,
+        transparent 100%
+    );
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.person.vomiting .person-queasy {
+    opacity: 1;
+}
+
+.person.vomiting {
+    animation: headHeave 0.55s ease-in-out 2;
+}
+
+.person.vomiting.vomit-again {
+    animation-name: headHeaveAgain;
+}
+
+.person.vomiting .person-brow-left {
+    transform: translateY(4px) rotate(14deg);
+}
+
+.person.vomiting .person-brow-right {
+    transform: translateY(4px) rotate(-14deg);
+}
+
+.person.vomiting .person-eye {
+    height: 6%;
+    top: 36%;
+}
+
+.person.vomiting .person-cheek {
+    opacity: 0;
+}
+
+.person.vomiting .person-mouth {
+    animation: none;
+    transform: translate(-50%, -50%) scaleX(0.8) scaleY(1.5);
+}
+
+.vomit-spew {
+    position: absolute;
+    left: 50%;
+    top: 80%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.vomit-spew span {
+    position: absolute;
+    left: -14px;
+    width: 28px;
+    height: 22px;
+    border-radius: 50% 50% 45% 55%;
+    background: radial-gradient(circle at 35% 30%, #d6e86a 0%, #8fb33a 70%);
+    box-shadow: inset 0 -2px 3px rgba(60, 90, 20, 0.45);
+    opacity: 0;
+    animation: vomitFall 0.75s ease-in forwards;
+}
+
+.vomit-spew span:nth-child(1) {
+    --tx: -10px;
+    --ty: 150px;
+    animation-delay: 0s;
+}
+.vomit-spew span:nth-child(2) {
+    --tx: 14px;
+    --ty: 170px;
+    animation-delay: 0.06s;
+}
+.vomit-spew span:nth-child(3) {
+    --tx: -26px;
+    --ty: 140px;
+    animation-delay: 0.12s;
+}
+.vomit-spew span:nth-child(4) {
+    --tx: 28px;
+    --ty: 160px;
+    animation-delay: 0.18s;
+}
+.vomit-spew span:nth-child(5) {
+    --tx: 0px;
+    --ty: 190px;
+    animation-delay: 0.24s;
+}
+.vomit-spew span:nth-child(6) {
+    --tx: -18px;
+    --ty: 175px;
+    animation-delay: 0.32s;
+}
+.vomit-spew span:nth-child(7) {
+    --tx: 20px;
+    --ty: 145px;
+    animation-delay: 0.4s;
+}
+
+@keyframes headHeave {
+    0%,
+    100% {
+        transform: translateY(0) scale(1, 1);
+    }
+    40% {
+        transform: translateY(10px) scale(1.04, 0.95);
+    }
+}
+
+@keyframes headHeaveAgain {
+    0%,
+    100% {
+        transform: translateY(0) scale(1, 1);
+    }
+    40% {
+        transform: translateY(10px) scale(1.04, 0.95);
+    }
+}
+
+@keyframes vomitFall {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.5);
+    }
+    70% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--tx, 0), var(--ty, 0)) scale(1.15);
+    }
+}
+
 .chomp-burst {
     position: absolute;
     left: 50%;
@@ -464,11 +625,20 @@ defineExpose({ faceEl, mouthEl });
 @media (prefers-reduced-motion: reduce) {
     .person,
     .person.gulping,
+    .person.vomiting,
     .person-mouth {
         animation: none;
     }
 
+    /* Still shown, as a puddle under the mouth, without the fall. */
+    .vomit-spew span {
+        animation: none;
+        opacity: 1;
+        transform: translate(var(--tx, 0), 40px);
+    }
+
     .person-mouth,
+    .person-queasy,
     .person-pupil,
     .person-brow,
     .person-cheek,

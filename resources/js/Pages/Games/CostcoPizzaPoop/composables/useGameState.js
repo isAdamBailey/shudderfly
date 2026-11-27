@@ -7,10 +7,11 @@ import {
 } from "./intestinePath.js";
 
 const POOP_RADIUS = 18;
+// Faster is better: full marks less a few for every second on the clock,
+// never below the floor. Touching the walls costs nothing.
 const MAX_SCORE = 1000;
 const MIN_SCORE = 100;
-const WALL_PENALTY = 10;
-const COLLISION_COOLDOWN_MS = 400;
+const POINTS_PER_SECOND = 10;
 // No move goes further than this at once, so a fast drag cannot carry the
 // poop through a wall into the coil beside it.
 const MAX_STEP = POOP_RADIUS / 2;
@@ -24,7 +25,6 @@ export function useGameState() {
         poopY: PATH_START.y,
         // The centreline sample the poop is beside.
         pathIndex: 0,
-        collisions: 0,
         startTime: 0,
         endTime: 0,
         score: 0,
@@ -33,11 +33,15 @@ export function useGameState() {
     const tick = ref(0);
     let tickInterval = null;
 
+    // Seconds on the clock: none before it starts, frozen once out.
+    function secondsRun() {
+        if (!state.startTime) return 0;
+        return ((state.endTime || Date.now()) - state.startTime) / 1000;
+    }
+
     const elapsedSeconds = computed(() => {
         tick.value;
-        if (!state.startTime) return 0;
-        const end = state.endTime || Date.now();
-        return Math.floor((end - state.startTime) / 1000);
+        return Math.floor(secondsRun());
     });
 
     const progress = computed(() => {
@@ -49,41 +53,29 @@ export function useGameState() {
         state.poopX = PATH_START.x;
         state.poopY = PATH_START.y;
         state.pathIndex = 0;
-        state.collisions = 0;
-        state.startTime = Date.now();
+        state.startTime = 0;
         state.endTime = 0;
         state.score = 0;
-        lastCollisionTime = 0;
-        againstWall = false;
+        clearInterval(tickInterval);
+    }
+
+    // The clock runs from when the poop can be steered, not from the
+    // stomach intro before it.
+    function startClock() {
+        state.startTime = Date.now();
         clearInterval(tickInterval);
         tickInterval = setInterval(() => {
             tick.value++;
         }, 1000);
     }
 
-    let lastCollisionTime = 0;
-    // Pressed against a wall since the last bump. Sliding along it, as a
-    // held drag does round a bend, is one bump, not one every cooldown.
-    let againstWall = false;
-
     function movePoop(dx, dy) {
         if (state.phase !== "playing") return;
 
         const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / MAX_STEP));
-        let hit = false;
         for (let i = 0; i < steps; i++) {
-            hit = stepPoop(dx / steps, dy / steps) || hit;
+            stepPoop(dx / steps, dy / steps);
         }
-
-        if (
-            hit &&
-            !againstWall &&
-            Date.now() - lastCollisionTime > COLLISION_COOLDOWN_MS
-        ) {
-            state.collisions++;
-            lastCollisionTime = Date.now();
-        }
-        againstWall = hit;
 
         if (PATH_LENGTH - PATH_POINTS[state.pathIndex].s <= EXIT_SLACK) {
             win();
@@ -91,7 +83,7 @@ export function useGameState() {
     }
 
     // Moves the poop a little, keeping it inside the tube: past the wall it
-    // is held against it. True when it touched a wall.
+    // is held against it.
     function stepPoop(dx, dy) {
         let x = state.poopX + dx;
         let y = state.poopY + dy;
@@ -99,15 +91,13 @@ export function useGameState() {
         const centre = PATH_POINTS[index];
         const room = centre.hw - POOP_RADIUS;
         const off = Math.hypot(x - centre.x, y - centre.y);
-        const hit = off > room;
-        if (hit) {
+        if (off > room) {
             x = centre.x + ((x - centre.x) * room) / off;
             y = centre.y + ((y - centre.y) * room) / off;
         }
         state.poopX = x;
         state.poopY = y;
         state.pathIndex = index;
-        return hit;
     }
 
     function win() {
@@ -115,7 +105,7 @@ export function useGameState() {
         state.endTime = Date.now();
         state.score = Math.max(
             MIN_SCORE,
-            MAX_SCORE - state.collisions * WALL_PENALTY
+            Math.round(MAX_SCORE - secondsRun() * POINTS_PER_SECOND)
         );
         state.phase = "win";
     }
@@ -127,6 +117,7 @@ export function useGameState() {
         elapsedSeconds,
         progress,
         startGame,
+        startClock,
         movePoop,
         POOP_RADIUS,
     };

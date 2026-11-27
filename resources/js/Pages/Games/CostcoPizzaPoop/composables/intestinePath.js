@@ -50,7 +50,7 @@ const PIECES = [
 
 const rad = (deg) => (deg * Math.PI) / 180;
 
-// Samples the path every SAMPLE_STEP for steering and collisions, and
+// Samples the path every SAMPLE_STEP for steering and keeping the poop in the tube, and
 // writes it as SVG lines and arcs (one path per section, so each can be
 // stroked at its own width) for drawing: a few commands, not a point each.
 function build() {

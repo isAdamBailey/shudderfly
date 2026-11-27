@@ -70,6 +70,8 @@
                 :anticipating="anticipating"
                 :gulping="gulping"
                 :chomp-count="chompCount"
+                :vomiting="vomiting"
+                :vomit-count="vomitCount"
             />
         </div>
     </div>
@@ -111,7 +113,7 @@ import { useTranslations } from "@/composables/useTranslations";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 // Over the world, in the kitchen (GameHost). The kit is the only way it
-// reaches the world: the chomp, the wall bonk, the poop's toot and the score.
+// reaches the world: the chomp, the poop's toot and the score.
 const props = defineProps({
     kit: { type: Object, required: true },
 });
@@ -139,6 +141,10 @@ const anticipating = ref(false);
 const gulping = ref(false);
 const chompCount = ref(0);
 let gulpTimer = null;
+const vomiting = ref(false);
+const vomitCount = ref(0);
+let vomitTimer = null;
+const VOMIT_MS = 1100;
 // A drag shorter than this is a tap.
 const TAP_SLOP = 8;
 
@@ -174,6 +180,7 @@ const {
     elapsedSeconds: intestineElapsedSeconds,
     progress,
     startGame: startIntestineGame,
+    startClock: startIntestineClock,
     movePoop,
     POOP_RADIUS,
 } = useGameState();
@@ -193,18 +200,6 @@ watch(
 
         props.kit.toot("guster");
         props.kit.finish({ score: intestineState.score });
-    }
-);
-
-watch(
-    () => intestineState.collisions,
-    (newCollisions, oldCollisions) => {
-        if (phase.value !== "intestine" || intestineIntroActive.value) {
-            return;
-        }
-        if (newCollisions > oldCollisions) {
-            props.kit.playSound("bonk");
-        }
     }
 );
 
@@ -304,6 +299,7 @@ function resetFaceFocus() {
 }
 
 function triggerGulp() {
+    stopVomit();
     anticipating.value = false;
     chompCount.value += 1;
     gulping.value = true;
@@ -312,6 +308,24 @@ function triggerGulp() {
         gulping.value = false;
         gulpTimer = null;
     }, 460);
+}
+
+// A food the face won't keep down: it throws up, and the food goes back.
+// Mid-throw-up it starts over (PersonFace restarts on a new vomitCount).
+function triggerVomit(s) {
+    stopVomit();
+    anticipating.value = false;
+    gulping.value = false;
+    vomitCount.value += 1;
+    vomiting.value = true;
+    s.x = s.startX;
+    s.y = s.startY;
+    vomitTimer = window.setTimeout(stopVomit, VOMIT_MS);
+}
+
+function stopVomit() {
+    clearTimeout(vomitTimer);
+    vomiting.value = false;
 }
 
 function removeDragListeners() {
@@ -327,6 +341,7 @@ function removeDragListeners() {
 }
 
 function chooseFood(kind) {
+    stopVomit();
     chosenFood.value = kind;
     sliceList.value = feedList(kind);
     layoutSlices();
@@ -334,6 +349,7 @@ function chooseFood(kind) {
 
 // Back to one of each. Only offered before the first bite.
 function unchooseFood() {
+    stopVomit();
     chosenFood.value = null;
     sliceList.value = pickList();
     layoutSlices();
@@ -357,6 +373,11 @@ function feedSlice(id) {
     if (phase.value !== "pizza") return;
     const s = sliceList.value.find((x) => x.id === id);
     if (!s || s.eaten) return;
+    if (findFood(s.kind).vomits) {
+        // Its button stays, so focus stays on it for another go.
+        triggerVomit(s);
+        return;
+    }
     s.eaten = true;
     showPizzaHint.value = false;
     triggerGulp();
@@ -409,7 +430,8 @@ function startDrag(id, e) {
             TAP_SLOP;
 
         if (pointInMouth(s.x, s.y)) {
-            if (!chosenFood.value) {
+            // feedSlice throws a soda up whether or not it was picked.
+            if (!chosenFood.value && !findFood(s.kind).vomits) {
                 // Dragged straight in: picked, and that was the first bite.
                 chooseFood(s.kind);
                 feedSlice(sliceList.value[0].id);
@@ -436,6 +458,7 @@ function startIntestineRun() {
     phase.value = "intestine";
     intestineIntroTimer = window.setTimeout(() => {
         intestineIntroActive.value = false;
+        startIntestineClock();
     }, INTESTINE_INTRO_MS);
 }
 
@@ -450,6 +473,7 @@ onUnmounted(() => {
     removeDragListeners();
     clearTimeout(intestineIntroTimer);
     clearTimeout(gulpTimer);
+    clearTimeout(vomitTimer);
 });
 </script>
 

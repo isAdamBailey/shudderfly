@@ -1,6 +1,6 @@
 import { FOOTPRINTS } from "./footprints.js";
 
-// The Butt's House oven, where Costco Food Poop's pizza bakes: a white
+// The Butt's House oven, where Food Poop's pizza bakes: a white
 // range between the kitchen counters, a black cooktop with four burners
 // level with the worktop, a backguard with its clock, a row of knobs, and
 // an oven door with a long chrome handle and a window lit warm inside.

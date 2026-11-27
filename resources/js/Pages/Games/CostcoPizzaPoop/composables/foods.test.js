@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FEED_COUNT, FOODS, findFood } from "./foods.js";
 
-describe("Costco Food Poop foods", () => {
+describe("Food Poop foods", () => {
     it("draws every food one way, and names it", () => {
         for (const food of FOODS) {
             expect(Boolean(food.emoji) !== Boolean(food.glyph)).toBe(true);

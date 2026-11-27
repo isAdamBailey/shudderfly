@@ -952,8 +952,8 @@ return [
     'games.cockroach_fight.hud_taps_label' => 'Touches :',
     'games.cockroach_fight.fight_label' => 'COMBAT !',
 
-    // Games - Costco Food Poop
-    'games.costco_pizza_poop.name' => 'Caca de Costco',
+    // Games - Food Poop
+    'games.costco_pizza_poop.name' => 'Caca de Nourriture',
     'games.costco_pizza_poop.description' => 'Choisis un aliment, donnes-en trois au visage, puis guide-le dans l’intestin jusqu’au grand final.',
     'games.costco_pizza_poop.hud_food_left' => 'Nourriture restante',
     'games.costco_pizza_poop.pizza_hint' => 'Fais glisser la nourriture dans la bouche 👇',
@@ -961,10 +961,10 @@ return [
     'games.costco_pizza_poop.pizza_slice' => 'Part de pizza',
     'games.costco_pizza_poop.pepperoni_stick' => 'Bâtonnet de pepperoni',
     'games.costco_pizza_poop.hot_dog' => 'Hot-dog',
+    'games.costco_pizza_poop.soda_pop' => 'Soda',
     'games.costco_pizza_poop.slice_aria' => ':item — fais-le glisser dans la bouche, ou appuie sur Entrée pour le manger',
     'games.costco_pizza_poop.pick_aria' => ':item — choisir cet aliment',
     'games.costco_pizza_poop.change_food' => 'Changer d’aliment',
-    'games.costco_pizza_poop.board_wall_hits_label' => 'Chocs',
     'games.costco_pizza_poop.board_progress_label' => 'Progression',
     'games.costco_pizza_poop.board_time_label' => 'Temps',
     'games.costco_pizza_poop.board_time_value' => ':seconds s',

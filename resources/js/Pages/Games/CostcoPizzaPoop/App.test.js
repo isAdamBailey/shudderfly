@@ -10,13 +10,16 @@ const intestine = vi.hoisted(() => ({ state: null }));
 
 vi.mock("./composables/useGameState.js", () => ({
     useGameState: () => {
-        intestine.state = reactive({ phase: "start", score: 0, collisions: 0 });
+        intestine.state = reactive({ phase: "start", score: 0 });
         return {
             state: intestine.state,
             elapsedSeconds: ref(0),
             progress: ref(0),
             startGame: () => {
                 intestine.state.phase = "playing";
+            },
+            startClock: () => {
+                intestine.state.clockStarted = true;
             },
             movePoop: vi.fn(),
             POOP_RADIUS: 10,
@@ -56,7 +59,7 @@ async function feedEverything(food = "pizza") {
     }
 }
 
-describe("Costco Food Poop", () => {
+describe("Food Poop", () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => {
         wrapper?.unmount();
@@ -89,6 +92,35 @@ describe("Costco Food Poop", () => {
         await pick("pepperoni");
         await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
         expect(wrapper.find(".change-food").exists()).toBe(false);
+    });
+
+    it("throws the soda up instead of eating it", async () => {
+        await play();
+        await pick("soda");
+        const face = () => wrapper.findComponent({ name: "PersonFace" });
+
+        await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
+
+        expect(face().props("vomiting")).toBe(true);
+        expect(kit.playSound).not.toHaveBeenCalled();
+        expect(wrapper.get(".hud-value").text()).toBe(String(FEED_COUNT));
+        expect(wrapper.find(".change-food").exists()).toBe(true);
+        expect(wrapper.find(".intestine-wrap").exists()).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1200);
+        expect(face().props("vomiting")).toBe(false);
+    });
+
+    it("stops throwing up when the food is changed", async () => {
+        await play();
+        await pick("soda");
+        await wrapper.find("button.slice").trigger("keydown", { key: "Enter" });
+
+        await wrapper.get(".change-food").trigger("click");
+
+        expect(
+            wrapper.findComponent({ name: "PersonFace" }).props("vomiting")
+        ).toBe(false);
     });
 
     it("hands the food eaten to the intestine", async () => {
@@ -125,15 +157,13 @@ describe("Costco Food Poop", () => {
         );
     });
 
-    it("bonks through the world when the poop hits a wall", async () => {
+    it("starts the clock once the stomach intro is over", async () => {
         await play();
         await feedEverything();
-        await vi.advanceTimersByTimeAsync(5000);
+        expect(intestine.state.clockStarted).toBeUndefined();
 
-        intestine.state.collisions = 1;
-        await nextTick();
-
-        expect(kit.playSound).toHaveBeenCalledWith("bonk");
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(intestine.state.clockStarted).toBe(true);
     });
 
     it("toots the poop out and hands the score to the world", async () => {

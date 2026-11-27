@@ -200,9 +200,14 @@ const digestIntro = computed(() => {
     };
 });
 
+// How far he closes on the finger, and his top speed while dragged, in one
+// 60 Hz frame. Each tick scales both by the time since the last one, so the
+// run is scored on time (useGameState) the same on any screen.
 const POINTER_LAG = 0.14;
-// His top speed while dragged, a step a frame.
 const MAX_DRAG_STEP = 10;
+const FRAME_MS = 1000 / 60;
+// A long gap (a dropped frame, a background tab) counts as at most this many.
+const MAX_FRAMES = 4;
 
 let dragActive = false;
 let grabOffset = { x: 0, y: 0 };
@@ -210,22 +215,27 @@ let grabOffset = { x: 0, y: 0 };
 // finger held still keeps the poop going while the camera follows it.
 let lastClient = { x: 0, y: 0 };
 let rafId = null;
+let lastTickAt = 0;
 
 function scheduleDragTick() {
     if (rafId != null) return;
+    lastTickAt = performance.now();
     rafId = requestAnimationFrame(dragTick);
 }
 
-function dragTick() {
+function dragTick(now = performance.now()) {
     rafId = null;
     if (!dragActive) return;
+    const frames = Math.min(MAX_FRAMES, (now - lastTickAt) / FRAME_MS);
+    lastTickAt = now;
     const p = clientToSvg(lastClient.x, lastClient.y);
-    if (p) {
-        const dx = (p.x + grabOffset.x - props.state.poopX) * POINTER_LAG;
-        const dy = (p.y + grabOffset.y - props.state.poopY) * POINTER_LAG;
+    if (p && frames > 0) {
+        const lag = 1 - (1 - POINTER_LAG) ** frames;
+        const dx = (p.x + grabOffset.x - props.state.poopX) * lag;
+        const dy = (p.y + grabOffset.y - props.state.poopY) * lag;
         const step = Math.hypot(dx, dy);
         if (step > 0.06) {
-            const cap = Math.min(1, MAX_DRAG_STEP / step);
+            const cap = Math.min(1, (MAX_DRAG_STEP * frames) / step);
             emit("move", dx * cap, dy * cap);
         }
     }
@@ -525,12 +535,6 @@ onUnmounted(() => {
         </svg>
 
         <div class="hud">
-            <div class="hud-item">
-                <span class="hud-label">{{
-                    t("games.costco_pizza_poop.board_wall_hits_label")
-                }}</span>
-                <span class="hud-value">{{ state.collisions }}</span>
-            </div>
             <div class="hud-item progress-wrap">
                 <span class="hud-label">{{
                     t("games.costco_pizza_poop.board_progress_label")
