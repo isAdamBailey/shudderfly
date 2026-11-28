@@ -12,6 +12,8 @@
     --wc-hand: #111827;
     --wc-second: #f97316;
     --wc-cap: #111827;
+    /* Map controls (see .gm-style below). */
+    --map-control-bg: theme("colors.indigo.600");
 }
 
 /* Chrome heights from Layouts/Nav/Navigation.vue: the 65px top bar, plus the
@@ -51,6 +53,7 @@
     --wc-hand: #0f3d2e;
     --wc-second: #d7263d;
     --wc-cap: #e8b547;
+    --map-control-bg: theme("colors.christmas.cranberry");
 }
 
 [data-theme="halloween"] {
@@ -62,6 +65,8 @@
     --wc-hand: #f5f5f5;
     --wc-second: #ff6600;
     --wc-cap: #ff7518;
+    /* Purple, not orange: white icons on orange fail contrast. */
+    --map-control-bg: theme("colors.halloween.purple");
 }
 
 [data-theme="fireworks"] {
@@ -73,6 +78,58 @@
     --wc-hand: #f8fafc;
     --wc-second: #3b82f6;
     --wc-cap: #ef4444;
+    --map-control-bg: theme("colors.red.600");
+}
+
+/* Google Map controls (Map.vue): Google's + / − zoom buttons and our
+   recenter arrow are translucent circles in the season's colour
+   (--map-control-bg) with white icons, solid on hover, so they stand out on
+   satellite imagery without hiding the map. Google styles its own buttons
+   inline, hence !important. */
+.gm-style .gm-bundled-control-on-bottom > .gmnoprint > div {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    height: auto !important;
+}
+
+.gm-style .gm-bundled-control-on-bottom .gm-control-active,
+.gm-style .gm-recenter-btn {
+    background-color: color-mix(
+        in srgb,
+        var(--map-control-bg) 55%,
+        transparent
+    ) !important;
+    border-radius: 9999px !important;
+    box-shadow: none !important;
+    color: #fff;
+    transition: background-color 150ms;
+}
+
+.gm-style .gm-bundled-control-on-bottom .gm-control-active:hover,
+.gm-style .gm-recenter-btn:hover {
+    background-color: var(--map-control-bg) !important;
+}
+
+/* Google's 1px divider between + and − becomes a gap between the circles. */
+.gm-style .gm-bundled-control-on-bottom > .gmnoprint > div > div {
+    background-color: transparent !important;
+    height: 6px !important;
+}
+
+.gm-style .gm-bundled-control-on-bottom .gm-control-active img {
+    filter: brightness(0) invert(1);
+}
+
+.gm-style .gm-recenter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
 }
 
 @layer utilities {
