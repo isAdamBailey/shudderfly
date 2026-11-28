@@ -170,3 +170,17 @@ php -r '$k = fn($p) => array_keys(require $p); $en = $k("lang/en/messages.php");
 ```
 
 Existing hardcoded strings encountered incidentally don't need to be retrofitted, but new code should not add more.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues on isAdamBailey/shudderfly. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five default roles, each label matching its name: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
