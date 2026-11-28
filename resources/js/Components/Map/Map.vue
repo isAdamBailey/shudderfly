@@ -689,7 +689,8 @@ const initializeMap = async () => {
             tilt: resolveInitialTilt(),
             heading: initialHeading,
             disableDefaultUI: true,
-            zoomControl: true,
+            // The camera control has its own zoom, so don't show both.
+            zoomControl: !cameraOn,
             mapTypeControl: props.showMapTypeControl,
             mapTypeControlOptions: {
                 style: window.google.maps.MapTypeControlStyle.DROPDOWN_MENU,
@@ -702,8 +703,10 @@ const initializeMap = async () => {
                 ],
             },
             cameraControl: cameraOn,
+            // Same corner as the recenter arrow and zoom, so Google stacks
+            // them; RIGHT_CENTER overlapped the arrow on short maps.
             cameraControlOptions: {
-                position: window.google.maps.ControlPosition.RIGHT_CENTER,
+                position: window.google.maps.ControlPosition.RIGHT_BOTTOM,
             },
             rotateControl: props.rotateView,
             streetViewControl: false,
@@ -901,21 +904,8 @@ const initializeMap = async () => {
                     type="button"
                     class="gm-recenter-btn"
                     title="Recenter on marker"
-                    style="
-                        background-color: white;
-                        border: none;
-                        border-radius: 2px;
-                        width: 40px;
-                        height: 40px;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        box-shadow: rgba(0, 0, 0, 0.3) 0px 1px 4px -1px;
-                        margin: 10px;
-                    "
                 >
-                    <span style="font-size: 20px;">📍</span>
+                    <i class="ri-navigation-fill" aria-hidden="true"></i>
                 </button>
             `;
 
@@ -1000,9 +990,11 @@ watch(
                 ? props.initialHeading
                 : 0;
         map.setHeading(h);
+        const cameraOn = useCameraControl();
         map.setOptions({
             mapTypeControl: props.showMapTypeControl,
-            cameraControl: useCameraControl(),
+            cameraControl: cameraOn,
+            zoomControl: !cameraOn,
             rotateControl: props.rotateView,
             gestureHandling: gestureHandlingForMap(),
         });
